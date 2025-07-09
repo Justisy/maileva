@@ -1,0 +1,1129 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://api.sandbox.maileva.net/notification_center/v2'
+    description: Sandbox
+  - url: 'https://api.maileva.com/notification_center/v2'
+    description: Production
+info:
+  version: '2.8'
+  title: Maileva / notifications (webhook)
+  description: |-
+    Cette API permet de  :
+    - Gérer vos abonnements à des notifications
+    - consulter les notifications
+    - relancer des notifiations
+
+    ### Principes Généraux
+
+    Il est possible d'etre notifié lorsque une ressource change d'état
+    (par exemple un envoi courrier ou un envoi de lettre recommandée), 
+    via un appel vers un webhook sur votre système. 
+    Pour cela, il faut au préalable vous abonner à un type d'évènement 
+    pour un type de ressource et indiquer l'URL à notifier. 
+    Vous pourrez aussi voir les notifications qui vous ont été envoyées 
+    au cours des 30 derniers jours et en consulter le détail.
+    Il est aussi possible de demander à rejouer des notifications.
+    
+    ### Mise en oeuvre
+
+    Pour recevoir des notifications, vous devez mettre en place une URL de callback.
+    Vous devez ensuite vous abonner à un évenement en précisant cette URL.
+    Lorque l'évènement surviendra, Maileva fera un POST sur l'URL en passant les paramétres ci-dessous.
+
+        {
+          "source": "api.maileva.com",
+          "user_id": "12345678-c014-4923-9bb9-497addd5e901",
+          "client_id": "f5e22e36-c014-4923-9bb9-497addd5e901",
+          "event_type": "ON_STATUS_ACCEPTED",
+          "resource_type": "mail/v2/sendings",
+          "event_date": "2017-10-02T10:23:31.137Z",
+          "event_location": "FR",
+          "resource_id": "e6118f29-89c3-41e5-82e8-00cb0b7b1b0c",
+          "resource_location": "https://api.maileva.com/mail/v2/sendings/e6118f29-89c3-41e5-82e8-00cb0b7b1b0c",
+          "resource_custom_id": "order1234",
+          "resource_custom_data": "my_data"
+        }
+    
+    Important : votre URL de callback devra retourner une erreur 201, 
+    sinon la notification sera considérée comme échouée et Maileva tentera d'autres appels ultérieurement.
+
+    Les spécifications de l'appel vers votre URL de callback est décrit dans l'onglet "Callbacks" du endpoint POST /subscriptions. 
+
+    Astuce : pour simuler un webhook, vous pouvez utiliser le site <a href="https://webhook.site">https://webhook.site</a>
+
+    ### En cas de problème
+
+    En cas d'échec lors de la première tentative de notification, 
+    Maileva fera jusqu'à 10 autres tentatives :
+      - 2ème tentative : 10 min après la 1ère tentative
+      - 3ème tentative : 10 min après la 2ème tentative
+      - 4ème tentative : 20 min après la 3ème tentative
+      - 5ème tentative : 30 min après la 4ème tentative
+      - 6ème tentative : 50 min après la 5ème tentative
+      - 7ème tentative : 80 min après la 6ème tentative
+      - 8ème tentative : 130 min après la 7ème tentative
+      - 9ème tentative : 210 min après la 8ème tentative
+      - 10ème tentative : 340 min après la 9ème tentative
+
+    ### Les évènements disponibles sont :
+    
+    Pour le Courrier Simple (mail/v2) : 
+
+      <table border="1">
+        <tr bgcolor="lightgrey">
+          <th>Type de ressource (`resource_type`)</th>
+          <th>Type d'évènement (`event_type`)</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>
+            mail/v2/sendings
+          </td>
+          <td>ON_STATUS_ACCEPTED</td>
+          <td>L'envoi est passé au statut *ACCEPTED*</td>
+        </tr>
+        <tr>
+          <td>
+            mail/v2/sendings
+          </td>
+          <td>ON_STATUS_REJECTED</td>
+          <td>L'envoi est passé au statut *REJECTED*</td>
+        </tr>
+        <tr>
+          <td>
+            mail/v2/sendings
+          </td>
+          <td>ON_STATUS_PROCESSED</td>
+          <td>L'envoi est passé au statut *PROCESSED*</td>
+        </tr>
+        <tr>
+          <td>
+            mail/v2/sendings
+          </td>
+          <td>ON_STATUS_ARCHIVED</td>
+          <td>Tous les documents correspondants aux destinataires valides ont été archivés</td>
+        </tr>
+      </table>
+
+    Pour l'ancienne LREL [dépréciée] (registered_mail/v2) : 
+
+      <table border="1">
+        <tr bgcolor="lightgrey">
+          <th>Type de ressource (`resource_type`)</th>
+          <th>Type d'évènement (`event_type`)</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>registered_mail/v2/sendings
+          </td>
+          <td>ON_STATUS_ACCEPTED</td>
+          <td>L'envoi est passé au statut *ACCEPTED*</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v2/sendings</td>
+          <td>ON_STATUS_REJECTED</td>
+          <td>L'envoi est passé au statut *REJECTED*</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v2/sendings</td>
+          <td>ON_STATUS_PROCESSED</td>
+          <td>L'envoi est passé au statut *PROCESSED*</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v2/sendings</td>
+          <td>ON_DEPOSIT_PROOF_RECEIVED</td>
+          <td>L'envoi a obtenu sa preuve de dépôt</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v2/recipients</td>
+          <td>ON_ACKNOWLEDGEMENT_OF_RECEIPT_RECEIVED</td>
+          <td>Le destinataire de l'envoi a obtenu son avis de réception</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v2/sendings</td>
+          <td>ON_STATUS_ARCHIVED</td>
+          <td>Tous les documents correspondants aux destinataires valides ont été archivés</td>
+        </tr>
+      </table>
+
+    Pour Maileva LREL (registered_mail/v4) : 
+
+      <table border="1">
+        <tr bgcolor="lightgrey">
+          <th>Type de ressource (`resource_type`)</th>
+          <th>Type d'évènement (`event_type`)</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/sendings
+          </td>
+          <td>ON_STATUS_ACCEPTED</td>
+          <td>L'envoi est passé au statut *ACCEPTED*</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/sendings</td>
+          <td>ON_STATUS_REJECTED</td>
+          <td>L'envoi est passé au statut *REJECTED*</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/sendings</td>
+          <td>ON_STATUS_PROCESSED</td>
+          <td>L'envoi est passé au statut *PROCESSED*</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/sendings</td>
+          <td>ON_GLOBAL_DEPOSIT_PROOF_RECEIVED</td>
+          <td>L'envoi a obtenu une preuve de dépôt globale</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_DEPOSIT_PROOF_RECEIVED</td>
+          <td>Le destinataire de l’envoi a obtenu sa preuve de dépôt</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_CONTENT_PROOF_RECEIVED</td>
+          <td>Le destinataire de l’envoi a obtenu sa preuve de contenu</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_ACKNOWLEDGEMENT_OF_RECEIPT_RECEIVED</td>
+          <td>Le destinataire de l'envoi a obtenu son avis de réception</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_UNDELIVERED_MAIL_RECEIVED</td>
+          <td>Le PND du destinataire de l’envoi a été numérisé</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_MAIN_DELIVERY_STATUS_FIRST_PRESENTATION</td>
+          <td>Le destinataire est passé au statut de distribution « première présentation »</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_MAIN_DELIVERY_STATUS_DELIVERED</td>
+          <td>Le destinataire est passé au statut de distribution « distribué »</td>
+        </tr>
+        <tr>
+          <td>registered_mail/v4/recipients</td>
+          <td>ON_MAIN_DELIVERY_STATUS_UNDELIVERED</td>
+          <td>Le destinataire est passé au statut de distribution « non distribuable »</td>
+        </tr>
+      </table>
+
+      Pour les envois flux (flow/v1) :
+
+      <table border="1">
+        <tr bgcolor="lightgrey">
+          <th>Type de ressource (`resource_type`)</th>
+          <th>Type d'évènement (`event_type`)</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>flow/v1/sendings</td>
+          <td>ON_STATUS_REJECTED</td>
+          <td>L'envoi est passé au statut *REJECTED*</td>
+        </tr>
+        <tr>
+          <td>flow/v1/sendings</td>
+          <td>ON_STATUS_SUBMITTED</td>
+          <td>L'envoi est passé au statut *SUBMITTED*</td>
+        </tr>
+        <tr>
+          <td>flow/v1/sendings</td>
+          <td>ON_STATUS_SUBMITTED_WITH_ERRORS</td>
+          <td>L'envoi est passé au statut *SUBMITTED_WITH_ERRORS*</td>
+        </tr>
+        <tr>
+      </table>
+
+      Pour Facture Client (invoices/v1) :
+
+      <table border="1">
+        <tr bgcolor="lightgrey">
+          <th>Type de ressource (`resource_type`)</th>
+          <th>Type d'évènement (`event_type`)</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>invoices/v1/sendings</td>
+          <td>ON_STATUS_ACCEPTED</td>
+          <td>L'envoi a été accepté</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/sendings</td>
+          <td>ON_STATUS_REJECTED</td>
+          <td>L'envoi a été rejeté</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/sendings</td>
+          <td>ON_STATUS_PROCESSED</td>
+          <td>L'envoi a été produit</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/sendings</td>
+          <td>ON_STATUS_PROCESSED_WITH_ERRORS</td>
+          <td>L'envoi a été produit mais certains destinataires sont en erreur</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_STATUS_ACCEPTED</td>
+          <td>Le destinataire est valide et a été pris en charge</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_STATUS_REJECTED</td>
+          <td>Le destinataire a été rejeté</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_STATUS_PROCESSED</td>
+          <td>Le destinataire a été produit</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_STATUS_ARCHIVED</td>
+          <td>Les documents du destinataire ont été archivés</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_MAIL_INVOICE_UNDELIVERED</td>
+          <td>Le courrier est non distribuable</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_PORTAL_INVOICE_RECEIVED</td>
+          <td>Le destinataire de l'envoi a reçu sa facture sur le portail de publication</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_SENT</td>
+          <td>L'email a été envoyé</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_RECEIVED</td>
+          <td>L'email a été réceptionné</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_RECIPIENT_UNSUBSCRIBED</td>
+          <td>Le destinataire de l’envoi s'est désinscrit de la liste d’emailing</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_BLOCKED</td>
+          <td>Le destinataire de l’envoi a blacklisté l’adresse email de l'expéditeur</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_HARD_BOUNCED</td>
+          <td>L’email est en erreur définitive</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_INVALID_DOMAIN</td>
+          <td>L’email n’a pas pu être délivré en raison d’un domaine invalide</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_COMPLAINT</td>
+          <td>Le destinataire de l’envoi a déclaré l’email comme spam</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_SOFT_BOUNCED</td>
+          <td>L’email est en erreur temporaire</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_EMAIL_INVOICE_INVALID_RECIPIENT</td>
+          <td>L’email n’a pas pu être délivré en raison de l’invalidité de l’adresse email du destinataire</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_DEPOSITED</td>
+          <td>La facture a été déposée sur la plateforme Chorus</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_RECEIVED</td>
+          <td>La facture a été mise à disposition du destinatairee</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_INVALID_RECIPIENT</td>
+          <td>La facture a été rejetée par l’ordonnateur pour erreur dans les données d’acheminement</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_REJECTED</td>
+          <td>La facture a été rejetée par l’ordonnateur</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_SUSPENDED</td>
+          <td>Le traitement de la facture a été suspendu</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_ACCOUNTANT_RECEIVED</td>
+          <td>La facture a été mise à disposition du comptable</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_PAYMENT</td>
+          <td>La facture a été mise en paiement</td>
+        </tr>
+        <tr>
+          <td>invoices/v1/recipients</td>
+          <td>ON_DELIVERY_STATUS_CHORUS_INVOICE_INCOMPLETE</td>
+          <td>La facture est en attente de pièces complémentaires</td>
+        </tr>
+        <tr>
+      </table>
+
+security:
+  - bearerAuth: []
+  - oAuth2PasswordProduction: []
+  - oAuth2PasswordSandbox: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      description: "Indiquez le token directement obtenu via la méthode suivante :
+        
+        curl -X POST 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+        -u 'my_client_id:my_client_secret' \
+        -d 'grant_type=password&username=my_user_login&password=my_user_password' \
+        -v"
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oAuth2PasswordProduction:
+      description: authentification oAuth2 en mode password sur l'environnment de production
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: CRUD on ressources
+    oAuth2PasswordSandbox:
+      description: authentification oAuth2 en mode password sur l'environnment Sandbox
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.sandbox.maileva.net/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: CRUD on ressources
+  schemas:
+
+    authentication:
+      description: Paramètres d'authentification à l'URL de callback (si nécessaire).
+      type: object
+      properties:
+          basic:
+            $ref: '#/components/schemas/basic'
+          oauth2:
+            $ref: '#/components/schemas/oauth2'
+          
+    basic:
+      type: object
+      properties:
+        login:
+          description: ID de l'utilisateur
+          type: string
+          example: company.name
+        password: 
+          description: Mot de passe de l'utilisateur
+          type: string
+          example: Company2020!
+
+    event_type:
+      description: Type d'évènement
+      type: string
+      enum:
+      - ON_STATUS_ACCEPTED
+      - ON_STATUS_REJECTED
+      - ON_STATUS_PROCESSED
+      - ON_STATUS_PROCESSED_WITH_ERRORS
+      - ON_DEPOSIT_PROOF_RECEIVED
+      - ON_GLOBAL_DEPOSIT_PROOF_RECEIVED
+      - ON_CONTENT_PROOF_RECEIVED
+      - ON_ACKNOWLEDGEMENT_OF_RECEIPT_RECEIVED
+      - ON_STATUS_ARCHIVED
+      - ON_DELIVERY_STATUS_MAIL_INVOICE_UNDELIVERED
+      - ON_DELIVERY_STATUS_PORTAL_INVOICE_RECEIVED
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_SENT
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_RECEIVED
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_RECIPIENT_UNSUBSCRIBED
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_BLOCKED
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_HARD_BOUNCED
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_INVALID_DOMAIN
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_COMPLAINT
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_SOFT_BOUNCED
+      - ON_DELIVERY_STATUS_EMAIL_INVOICE_INVALID_RECIPIENT
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_DEPOSITED
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_RECEIVED
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_INVALID_RECIPIENT
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_REJECTED
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_SUSPENDED
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_ACCOUNTANT_RECEIVED
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_PAYMENT
+      - ON_DELIVERY_STATUS_CHORUS_INVOICE_INCOMPLETE
+      - ON_UNDELIVERED_MAIL_RECEIVED
+      - ON_MAIN_DELIVERY_STATUS_FIRST_PRESENTATION
+      - ON_MAIN_DELIVERY_STATUS_DELIVERED
+      - ON_MAIN_DELIVERY_STATUS_UNDELIVERED
+      
+      example: ON_STATUS_ACCEPTED
+
+    error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+          
+    errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/error_response'
+
+    notification_content_creation:
+      type: object
+      description: notification
+      properties:
+        source:
+          type: string
+          description: Source de la notification
+          example: "api.maileva.com"
+        user_id:
+          type: string
+          description: Identifiant de l'utilisateur à qui appartient la ressource
+          example: "12345678-c014-4923-9bb9-497addd5e901"
+        client_id:
+          type: string
+          description: Identifiant de l'application qui a permis de créer la ressource
+          example: "f5e22e36-c014-4923-9bb9-497addd5e901"
+        event_type:
+          $ref: '#/components/schemas/event_type'
+        resource_type:
+          type: string
+          description: Type de ressource
+          example: "mail/v2/sendings"
+        event_date:
+          type: string
+          format: date-time
+          description: Date de l'événement
+          example: "2017-10-02T10:23:31.137Z"
+        event_location:
+          type: string
+          description: Lieu de l'événement
+          example: "FR"
+        resource_id:
+          type: string
+          description: Identifiant de la ressource
+          example: "e6118f29-89c3-41e5-82e8-00cb0b7b1b0c"
+        resource_location:
+          type: string
+          description: URL vers la ressource
+          example: "https://api.maileva.com/mail/v2/sendings/e6118f29-89c3-41e5-82e8-00cb0b7b1b0c"
+        resource_custom_id:
+          type: string
+          description:  Identifiant de la ressource défini par le client
+          example: "order1234"
+        resource_custom_data:
+          type: string
+          description:  Information spécifique définie avec le client
+          example: "my_data"
+
+    oauth2:
+      type: object
+      properties:
+        oauth2_server:
+          description: URL d'authentification
+          type: string
+          example: 'https:/api.mycompany.com/authentication/oauth2/token'
+        client_id: 
+          description: ID de l'application cliente
+          type: string
+          example: '1e47f791d11f66008e770bf7fac91420'
+        client_secret:
+          description: Mot de passe de l'application cliente
+          type: string
+          example: '49ac03ec6d50039268e61681aab7299b'
+        grant_type:
+          description: Type d'authentification
+          type: string
+          enum:
+          - client_credentials
+          example: client_credentials
+
+    paging_response:
+      description: Pagination des résultats
+      type: object
+      properties:
+        next:
+          description: Page suivante
+          type: string
+        prev:
+          description: Page précédente
+          type: string
+        total_results:
+          description: Nombre de résultats
+          type: number
+
+    resource_type:
+      description: Type de ressource
+      type: string
+      enum:
+      - mail/v2/sendings
+      - mail/v2/recipients
+      - registered_mail/v4/sendings
+      - registered_mail/v4/recipients
+      - registered_mail/v2/sendings
+      - registered_mail/v2/recipients
+      - invoices/v1/sendings
+      - invoices/v1/recipients
+      example: mail/v2/sendings
+
+    subscription_creation:
+      type: object
+      properties:
+        event_type:
+          $ref: '#/components/schemas/event_type'
+        resource_type:
+          $ref: '#/components/schemas/resource_type'
+        callback_url:
+          description: URL du client pour le callback
+          type: string
+          example: https://api.mycompany.com/callback
+        authentication:
+          $ref: '#/components/schemas/authentication'  
+            
+    subscription_response:
+      type: object
+      properties:
+        id:
+          description: ID de l'abonnement
+          type: string
+          example: 'a26d3c9f-9e21-4653-ab42-5589cd366523'         
+        event_type:
+          description: Type d'événement sur la ressource
+          type: string
+          example: ON_STATUS_ACCEPTED
+        resource_type:
+          description: Type de ressource
+          type: string
+          example: mail/v2/sendings
+        callback_url:
+          description: URL du client pour le callback
+          type: string
+          example: https://api.mycompany.com/callback
+        authentication:
+          $ref: '#/components/schemas/authentication'
+          
+    subscriptions_response:
+      description: Les abonnements aux notifications
+      type: object
+      properties:
+        subscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/subscription_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+      
+    subscription_modification:
+      type: object
+      properties:
+        callback_url:
+          description: URL du client pour le callback
+          type: string
+          example: https://api.mycompany.com/callback
+        authentication:
+          $ref: '#/components/schemas/authentication'    
+    
+    notification_response:
+      type: object
+      properties:
+        id:
+          description: Identifiant de la notification
+          type: string
+          example: "6122ef17-de76-467d-a44b-b7cdb8656808"
+        subscription_id:
+          description: Identifiant de l'abonnement
+          type: string
+          example: "6122ef17-de76-467d-a44b-b7cdb8656909"
+        status:
+          description: |-
+            Statut de la notification
+              <table border="1">
+                <tr bgcolor="lightgrey">
+                  <th>&nbsp; <strong>Valeurs</strong></th>
+                  <th>&nbsp; <strong>Détails</strong></th>
+                </tr>
+                <tr>
+                  <td>"PENDING"</td>
+                  <td>Tentatives d'envoi en cours</td>
+                </tr>
+                <tr>
+                  <td>"SENT"</td>
+                  <td>Notification envoyée</td>
+                </tr>
+                <tr>
+                  <td>"MAX_RETRY"</td>
+                  <td>Notification échouée. Le nombre maximum de tentatives a été atteint.</td>
+                </tr>
+              </table>
+          type: string
+          enum:
+          - PENDING
+          - SENT
+          - MAX_RETRY
+          example: SENT
+        attempt_count:
+          description: Nombre de tentatives
+          type: number
+          example: 2
+        first_attempt_date:
+          description: Date de la première tentative
+          type: string
+          format: date-time
+          example: "2017-10-02T10:23:31.137Z"
+        last_attempt_date:
+          description: Date de la dernière tentative
+          type: string
+          format: date-time
+          example: "2017-10-02T10:23:31.137Z"
+        last_response_code:
+          description: Code HTTP retourné par le callback
+          type: number
+          example: "200"
+        resource_type:
+          type: string
+          description: Type de ressource
+          example: "mail/v1/sendings"
+        resource_id:
+          type: string
+          description: Identifiant de la ressource
+          example: "e6118f29-89c3-41e5-82e8-00cb0b7b1b0c"
+        resource_custom_id:
+          type: string
+          description:  Identifiant de la ressource défini par le client
+          example: "order1234"
+        resource_custom_data:
+          type: string
+          description:  Information spécifique définie avec le client
+          example: "my_data"
+    
+    notifications_response:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/notification_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+
+  parameters:
+    subscription_id:
+      description: Identifiant de l'abonnement
+      name: subscription_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+    notification_id:
+      description: Identifiant de la notification
+      name: notification_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+    paging_start_index:
+      description: Le premier élément à retourner
+      name: start_index
+      in: query
+      required: false
+      schema:
+        type: number
+        default: 1
+        minLength: 1
+    paging_count:
+      description: Le nombre d'élément à retourner
+      name: count
+      in: query
+      required: false
+      schema:
+        type: number
+        default: 50
+        minLength: 1
+        maxLength: 500
+
+paths:
+  /subscriptions:
+    post:
+      tags:
+        - Abonnements
+      summary: Création d'un abonnement
+      description: |-
+        Permet de s'abonner aux notifications de suivi d'une ressource.
+        
+        Indiquer le type d'évènement, le type de ressource, ainsi que votre URL de callback.
+        
+        L'abonnement sera créé pour l'application (client_id) et l'utilisateur avec lesquels vous vous êtes authentifié.
+        
+        Lorque l'évènement se produit sur une ressource du type indiqué et que cette ressource a été créée
+        avec votre application et votre utilisateur, alors votre URL de callback sera appelée selon les
+        spécifications figurant dans l'onglet "Callbacks" ci-dessous.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/subscription_creation'
+      callbacks:
+        notifications:
+          '/notifications':
+              post:
+                summary: callback de notification
+                description: Callback à implementer dans votre SI pour recevoir des notifications
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/notification_content_creation' 
+                responses:
+                  '201':
+                    description: Successful operation
+
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscription_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    get:
+      tags:
+        - Abonnements
+      summary: Liste des abonnements
+      description: >-
+        Permet d'obtenir la liste des abonnements.
+
+         Il est possible de rajouter un attribut dans les paramètres afin de filtrer la liste des envois. La liste des envois peut être paginée. Par défaut, la pagination est de 50 résultats. Elle peut être modifiée pour atteindre jusqu'à 500 résultats.
+      parameters:
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscriptions_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  '/subscriptions/{subscription_id}':
+    get:
+      tags:
+        - Abonnements
+      summary: Détail d'un abonnement
+      description: Permet de récupérer le détail d'un abonnement à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/subscription_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscription_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    patch:
+      tags:
+        - Abonnements
+      summary: Modification d'un abonnement
+      description: >-
+        Permet de modifier une abonnement :
+
+        - L'URL de callback
+
+        - l'authentification
+
+      parameters:
+        - $ref: '#/components/parameters/subscription_id'
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/subscription_modification'
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscription_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Abonnements
+      summary: Suppression d'un abonnement
+      description: Permet de supprimer un abonnement.
+      parameters:
+        - $ref: '#/components/parameters/subscription_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Liste des notifications
+      description: >-
+        Permet d'obtenir la liste des notifications.
+
+         Il est possible de rajouter un attribut dans les paramètres afin de filtrer la liste des notifications. La liste des notifications peut être paginée. Par défaut, la pagination est de 50 résultats. Elle peut être modifiée pour atteindre jusqu'à 500 résultats.
+      parameters:
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notifications_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                
+  '/notifications/{notification_id}':
+    get:
+      tags:
+        - Notifications
+      summary: Détail d'une notification
+      description: Cette API permet de récupérer une notification à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/notification_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notification_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/notifications/{notification_id}/content':
+    get:
+      tags:
+        - Notifications
+      summary: Contenu d'une notification
+      description: Cette API permet de récupérer le contenu d'une notification à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/notification_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notification_content_creation'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/notifications/{notification_id}/retry':
+    post:
+      tags:
+        - Notifications
+      summary: Rejoue des notifications
+      description: |-
+        Permet de rejouer les notifications. 
+
+        En cas d'échec lors de la première tentative de notification, 
+        Maileva fera jusqu'à 10 autres tentatives :
+        - 2ème tentative : 10 min après la 1ère tentative
+        - 3ème tentative : 10 min après la 2ème tentative
+        - 4ème tentative : 20 min après la 3ème tentative
+        - 5ème tentative : 30 min après la 4ème tentative
+        - 6ème tentative : 50 min après la 5ème tentative
+        - 7ème tentative : 80 min après la 6ème tentative
+        - 8ème tentative : 130 min après la 7ème tentative
+        - 9ème tentative : 210 min après la 8ème tentative
+        - 10ème tentative : 340 min après la 9ème tentative
+            
+      parameters:
+        - $ref: '#/components/parameters/notification_id'
+
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notification_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+                

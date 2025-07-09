@@ -1,0 +1,1213 @@
+openapi: 3.0.1
+
+servers:
+  - url: 'https://api.maileva.com/electronic_consents/v1'
+    description: Prod
+  - url: 'https://api.sandbox.maileva.net/electronic_consents/v1'
+    description: Sandbox
+
+info:
+  title: Maileva / Création et envoi de consentements pour les envois électroniques.
+  description: |-
+    API pour créer des consentements, envoyer des demandes de consentement et déclarer des consentements préalablement obtenus des destinataires.
+
+    La loi oblige de disposer du consentement d'un destinataire avant l'envoi de recommandés électroniques ou d'avis électroniques.
+
+    Les API d'envoi électronique ne tiennent pas compte de ces consentements. 
+    C'est l'application qui doit vérifier les consentements avant de faire appel aux API d'envoi électronique.
+
+  version: '1.9'
+paths:
+  /consents:
+    post:
+      tags:
+        - Demandes de consentements
+      summary: Créer une demande de consentement
+      description: >-
+        Permet de créer une demande de consentement
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/consent_ask_creation'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/consent_ask_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    get:
+      tags:
+        - Demandes de consentements
+      summary: Récupérer la liste des demandes de consentement
+      description: >-
+        Permet de récupérer les demande de consentements.
+        Il est possible de rajouter un attribut dans les paramètres
+        afin de filtrer la liste des consentements. La liste des consentements
+        peut être paginée. Par défaut, la pagination est de 50 résultats.
+        Elle peut être modifiée pour atteindre jusqu''à 500 résultats.'
+      parameters:
+        - name: start_index
+          in: query
+          description: Le premier élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          description: Le nombre d'élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/consent_asks_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /consents/{consent_id}:
+    get:
+      tags:
+        - Demandes de consentements
+      summary: Récupérer une demande de consentement
+      description: >-
+        Permet de récupérer une demande de consentement
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/consent_ask_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    delete:
+      tags:
+        - Demandes de consentements
+      summary: Supprimer la demande de consentement
+      description: >-
+        Permet de supprimer la demande de consentement
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /consents/{consent_id}/answers:
+    post:
+      tags:
+        - Demandes de consentements
+      summary: Créer une réponse à une demande de consentement
+      description: >-
+        Permet de créer une réponse à demande de consentement
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/answer_creation'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/answer_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    get:
+      tags:
+        - Demandes de consentements
+      summary: Récupérer les réponses des consentements recueillis
+      description: >-
+        Permet de récupérer les réponses d'une demande de consentement
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/answers_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  /consents/{consent_id}/requests:
+    post:
+      tags:
+        - Demandes de consentements
+      summary: Soumettre une demande de consentement
+      description: >-
+        Permet de soumettre une demande de consentement
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/request_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    get:
+      tags:
+        - Demandes de consentements
+      summary: Récupérer les réponses d'une demande de consentement
+      description: >-
+        Permet de récupérer les réponses d'une demande de consentement
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/requests_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  '/consents/{consent_id}/download_proof':
+    get:
+      tags:
+        - Demandes de consentements
+      summary: 'Télécharger la preuve de consentement du destinataire'
+      description: Permet de télécharger au format PDF le justificatif de consentement du destinataire.
+      operationId: downloadDeliveryProof
+      parameters:
+        - name: consent_id
+          in: path
+          description: Identifiant de la demande de consentement
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/pdf:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/consents_imports':
+    post:
+      tags:
+        - Import de consentements
+      summary: Démarrer un import étape par étape
+      description: >-
+        Permet de démarrer un import étape par étape en upload un fichier de destinataires avec son mapping
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/consent_asks_import_input'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportConsentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    get:
+      tags:
+        - Import de consentements
+      summary: Récupérer l'état d'un import étape par étape
+      description: >-
+        Permet de récupérer l'état de l'import étape par étape
+      parameters:
+        - name: start_index
+          in: query
+          description: Le premier élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          description: Le nombre d'élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportConsentsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/consents_imports/{consent_import_id}/validate':
+    post:
+      tags:
+        - Import de consentements
+      summary: Valider la liste des destinataires des consentements
+      description: >-
+
+        Permet de soumettre la liste des destinataires des consentements
+        et de spécifier si une demande de consenement doit leur être envoyée
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  '/consents_imports/{consent_import_id}':
+    get:
+      tags:
+        - Import de consentements
+      summary: Récupérer l'état d'un import étape par étape
+      description: >-
+        Permet de récupérer l'état de l'import étape par étape
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportConsentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    delete:
+      tags:
+        - Import de consentements
+      summary: Supprimer l'import étape par étape
+      description: >-
+        Permer de supprimer l'import étape par étape
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/consents_imports/{consent_import_id}/recipients':
+    get:
+      tags:
+        - Import de consentements
+      summary: Détail des destinataires
+      description: Permet de lister les destinataire d'un import étape par étape
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+        - name: start_index
+          in: query
+          description: Le premier élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          description: Le nombre d'élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/consent_asks_imports_recipients'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    delete:
+      tags:
+        - Import de consentements
+      summary: Supprimer tous les destinataires
+      description: >-
+        Permet de supprimer tous les destinataires
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+        - name: status
+          in: query
+          description: statut des destinataires importés
+          required: false
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/consents_imports/{consent_import_id}/recipients/{recipient_id}':
+    get:
+      tags:
+        - Import de consentements
+      summary: Détail d'un destinataire
+      description: Permet de lister les données d'un destinataire d'un import étape par étape
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/consent_asks_imports_recipient'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    patch:
+      tags:
+        - Import de consentements
+      summary: Modification partielle d'un destinataire
+      description: Permet de modifier partiellement un destinataire
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/consent_asks_imports_recipient_update'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/consent_asks_imports_recipient'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    delete:
+      tags:
+        - Import de consentements
+      summary: Suppression d'un destinataire
+      description: Permet de supprimer un destinataire d'un import.
+      parameters:
+        - name: consent_import_id
+          in: path
+          description: Identifiant de l'import
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            maxLength: 40
+            type: string
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+components:
+  schemas:
+    ErrorDto:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    ErrorsDto:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDto'
+    Paging:
+      type: object
+      properties:
+        prev:
+          type: string
+        next:
+          type: string
+        total_results:
+          type: integer
+          format: int64
+    Event:
+      type: object
+      properties:
+        id_mail:
+          type: string
+        new_state:
+          type: string
+        proof_url:
+          type: string
+        view_date:
+          type: string
+        refused_date:
+          type: string
+        negligence_date:
+          type: string
+        id_consent:
+          type: string
+    mapping:
+      type: object
+      description: Mapping du fichier
+      properties:
+        start_row:
+          type: number
+          description: Première ligne de données
+          example: 2
+        data:
+          type: array
+          description: Mapping des colonnes
+          items:
+            type: object
+            properties:
+              column:
+                type: array
+                items:
+                  type: number
+                  description: numéro de la colonne
+                  example: 3
+              field:
+                type: string
+                description: champ du destinataire
+                enum:
+                  - FIRST_NAME
+                  - LAST_NAME
+                  - EMAIL
+                  - COMPANY
+                  - WAITING_DURATION
+                  - CONSENT_STATUS
+                  - RESPONSE_DATE
+    ask_consents:
+      type: object
+      description: ID de l'import à relier à l'envoi
+      required:
+        - sender_id
+      properties:
+        sender_id:
+          type: string
+    consent_asks_imports_recipient_update:
+      type: object
+      description: Destinataire de l'import
+      properties:
+        first_name:
+          type: string
+          description: Prénom du destinataire
+          example: jean
+        last_name:
+          type: string
+          description: Nom du destinataire
+          example: Dupont
+        email:
+          pattern: '^[\w]{1,}[\w.+-]{0,}@[\w-]{2,}([.][a-zA-Z]{2,}|[.][\w-]{2,}[.][a-zA-Z]{2,})+$'
+          type: string
+          description: Adresse email du destinataire
+          example: jean.dupont@gmail.com
+        company:
+          type: string
+          description: Société du destinataire
+        consent_status:
+          type: string
+          description: Statut du consentement si to_ask est false
+          enum:
+            - ACCEPTED
+            - REFUSED
+        response_date:
+          type: string
+          description: Date d'obtention du consentement
+
+    consent_asks_imports_recipient:
+      type: object
+      description: Destinataire de l'import
+      properties:
+        id:
+          type: string
+          description: Identifiant du destinataire
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        legal_status:
+          enum:
+            - PROFESSIONAL
+            - INDIVIDUAL
+          type: string
+          description: Type de destinataire
+        first_name:
+          type: string
+          description: Prénom du destinataire
+          example: jean
+        last_name:
+          type: string
+          description: Nom du destinataire
+          example: Dupont
+        email:
+          pattern: '^[\w]{1,}[\w.+-]{0,}@[\w-]{2,}([.][a-zA-Z]{2,}|[.][\w-]{2,}[.][a-zA-Z]{2,})+$'
+          type: string
+          description: Adresse email du destinataire
+          example: jean.dupont@gmail.com
+        company:
+          type: string
+          description: Société du destinataire
+        status:
+          type: string
+          enum:
+            - VALID
+            - INVALID
+        consent_status:
+          type: string
+          description: Statut du consentement si to_ask est false
+          enum:
+            - ACCEPTED
+            - REFUSED
+        response_date:
+          type: string
+          description: Date d'obtention du consentement
+        pages_range:
+          type: object
+          properties:
+            start_page:
+              type: integer
+            end_page:
+              type: integer
+        errors:
+          type: array
+          description: Erreurs trouvées sur l'adresse du destinataire
+          items:
+            $ref: '#/components/schemas/ErrorsDto'
+        custom_fields:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+
+    consent_asks_imports:
+      type: object
+      required:
+        - addresses_imports
+        - paging
+      description: Les imports de destinataires
+      properties:
+        addresses_imports:
+          type: array
+          items:
+            $ref: '#/components/schemas/consent_asks_import'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    consent_asks_imports_recipients:
+      type: object
+      description: Destinataire de l'import
+      properties:
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/consent_asks_imports_recipient'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    consent_asks_import_input:
+      type: object
+      description: Import étape par étape de destinataire
+      properties:
+        delimiter:
+          type: string
+          description: Séparateur pour les fichiers type TXT/CSV
+        to_ask:
+          type: boolean
+          description: Savoir s'il s'agit d'un consentement à demander
+        mapping:
+          $ref: '#/components/schemas/mapping'
+
+    consent_asks_import:
+      type: object
+      description: Import étape par étape de destinataire
+      properties:
+        filename:
+          type: string
+          description: nom du fichier fourni
+        delimiter:
+          type: string
+          description: separateur
+        mapping:
+          $ref: '#/components/schemas/mapping'
+        status:
+          type: string
+          description: Statut de l'import
+          enum:
+            - ERROR
+            - IN_PROGRESS
+            - DONE
+        consents_count:
+          type: number
+          description: Nombre de destinataires total de l'import
+        valid_consents_count:
+          type: number
+          description: Nombre de destinataires valides de l'import
+        invalid_consents_count:
+          type: number
+          description: Nombre de destinataires invalides de l'import
+    ImportConsentResponse:
+      type: object
+      description: Import étape par étape de destinataire
+      properties:
+        id:
+          type: string
+          description: Identifiant de l'import
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        file_name:
+          type: string
+          description: nom du fichier fourni
+        delimiter:
+          type: string
+          description: separateur
+        sender_id:
+          type: string
+          description: Identifiant du sender
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        mapping:
+          $ref: '#/components/schemas/mapping'
+        status:
+          type: string
+          description: Statut de l'import
+          enum:
+            - ERROR
+            - IN_PROGRESS
+            - DONE
+        consents_count:
+          type: number
+          description: Nombre de destinataires total de l'import
+        valid_consents_count:
+          type: number
+          description: Nombre de destinataires valides de l'import
+        invalid_consents_count:
+          type: number
+          description: Nombre de destinataires invalides de l'import
+    ImportConsentsResponse:
+      type: object
+      properties:
+        consents_imports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportConsentResponse'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    consent_ask_creation:
+      type: object
+      required:
+        - sender_id
+        - last_name
+        - first_name
+        - email
+      description: Création de consentement
+      properties:
+        sender_id:
+          type: string
+          description: ID de l'expéditeur
+        custom_id:
+          type: string
+          description: Identifiant du destinataire fourni par le client
+          example: custom
+        last_name:
+          type: string
+          description: nom du destinataire de la demande
+        first_name:
+          type: string
+          description: prénom du destinataire de la demande
+        email:
+          type: string
+          description: email du destinataire de la demande
+        company:
+          type: string
+          description: nom de société du destinataire si administration
+        waiting_duration: 
+          type: integer
+          description: Nombre de jour avant de considérer qu'un consentement est refusé. Par défaut, le délai est de 7 jours. Possible de 1 à 30 jours. (sur api seulement, sur le front, 7 par défaut).
+        notifying_product:
+          type: string
+          description: Type de produit électronique souhaité. Par défaut, le type est ELECTRONIC_QUALIFIED_REGISTERED_MAIL. En fonction du type de produit électronique indiqué, la notification email reçue par le destinataire est personnalisée. 
+          enum:
+            - ELECTRONIC_NOTICE
+            - ELECTRONIC_QUALIFIED_REGISTERED_MAIL
+    consent_ask_response:
+      type: object
+      description: Détail d'une demande de consentement
+      properties:
+        sender_id:
+          type: string
+          description: Id de l'expediteur
+        id:
+          type: string
+          description: Id de la demande
+        custom_id:
+          type: string
+          description: Identifiant du destinataire fourni par le client
+          example: custom
+        creation_date:
+          type: string
+          description: Date de création de la demande
+        last_name:
+          type: string
+          description: nom du destinataire de la demande
+        first_name:
+          type: string
+          description: prénom du destinataire de la demande
+        email:
+          type: string
+          description: email du destinataire de la demande
+        company:
+          type: string
+          description: nom de société du destinataire si administration
+        waiting_duration: 
+          type: integer
+          description: Nombre de jour avant de considérer qu'un consentement est refusé. Par défaut, le délai est de 7 jours. Possible de 1 à 30 jours. (sur api seulement, sur le front, 7 par défaut). 
+        notifying_product:
+          type: string
+          description: Type de produit électronique souhaité. Par défaut, le type est ELECTRONIC_QUALIFIED_REGISTERED_MAIL. En fonction du type de produit électronique indiqué, la notification email reçue par le destinataire est personnalisée. 
+          enum:
+            - ELECTRONIC_NOTICE
+            - ELECTRONIC_QUALIFIED_REGISTERED_MAIL
+        last_answer:
+          $ref: '#/components/schemas/answer_response'
+        last_request:
+          $ref: '#/components/schemas/request_response'
+    answer_creation:
+      type: object
+      description: Création d'une réponse à une demande de consentement
+      properties:
+        date:
+          type: string
+          description: date de la réponse
+        status:
+          type: string
+          enum:
+            - ACCEPTED
+            - REFUSED
+    answer_response:
+      type: object
+      description: réponse à une demande de consentement
+      properties:
+        id:
+          type: string
+          description: id de la réponse
+        date:
+          type: string
+          description: date de la réponse
+        declared_by:
+          type: string
+          enum:
+            - SENDER
+            - RECIPIENT
+        status:
+          type: string
+          enum:
+            - ACCEPTED
+            - REFUSED
+        proof_href:
+          type: string
+          description: url du PDF de preuve de consentement
+    request_response:
+      type: object
+      description: envoi d'une demande de consentement
+      properties:
+        date:
+          type: string
+          description: date de l'envoi de la demande
+        created_by:
+          type: string
+          description: id de l'expediteur
+        status:
+          type: string
+          enum:
+            - ANSWERED
+            - ASKED
+            - EXPIRED
+    consent_asks_response:
+      type: object
+      properties:
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/consent_ask_response'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    answers_response:
+      type: object
+      properties:
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/answer_response'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    requests_response:
+      type: object
+      properties:
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/request_response'
+        paging:
+          $ref: '#/components/schemas/Paging'

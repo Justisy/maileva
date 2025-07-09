@@ -1,0 +1,809 @@
+openapi: 3.0.1
+info:
+  title: Maileva / Gestion des expéditeurs LRE 100% électronique
+  description: |2-
+
+    API pour créer les expéditeurs d'envois électroniques.
+
+    Elle comprend les fonctions clés pour:
+
+    - créer un expéditeur
+    - commander une clé OTP pour vérifier l'identité de l'expéditeur dans le cadre d'envois 100% électroniques
+
+    Avant de pouvoir effectuer un envoi électronique (type LRE 100 % éléctronique ou avis électronique), l'utilisateur doit paramétrer un compte expéditeur en indiquant son nom, prénom, adresse e-mail et adresse postale.
+
+    <B>Authentification renforcée pour la LRE 100 % éléctronique:</B>
+
+    Afin d’effectuer un envoi de LRE 100 % éléctronique, il est nécessaire d’identifier l’expéditeur du courrier.
+    Cette identification passe par des OTP pour l’expéditeur, lorsqu’il souhaite faire un envoi via l’API.
+    Pour ce faire, un courrier recommandé contenant la clé d'authentification, lui est adressé par voie postale. Cette clé d'authentification lui permettra de générer ses OTP.
+
+    Avant de démarrer cette procédure, assurez-vous que l’adresse postale du compte expéditeur soit correcte puisque le document sera envoyé par voie postale (les délais postaux s’appliquent).
+
+
+    <B>Stockage de votre clé OTP :</B>
+
+    La clé d'authentification est un document vous permettant de confirmer votre identité pour accuser réception ou expédier des LRE 100% éléctroniques. Il s’agit d’un moyen d’authentification à part entière et qui doit donc être stocké de manière complètement sécurisée. Ce document contient la clé OTP vous permettant de générer automatiquement des codes à usages uniques (Protocole TOTP).
+
+    Cette clé OTP est une donnée sensible, c’est pourquoi il est important de :
+
+    - Révoquer la clé OTP en cas de perte ou de vol (POST/senders/{sender_id}/revoke_identity)
+    - Stocker de manière sécurisé la clé. Seul l’utilisateur associé à la clé doit pouvoir accéder et utiliser cette donnée
+    - Stocker cette clé localement sur un dispositif sous contrôle exclusif de l’utilisateur
+    - Stocker la clé de manière chiffrée en utilisant des algorithmes sécurisés (tel que l’AES256).
+
+    <B>Utilisation de votre clé d'authentification :</B>
+
+    Une fois le document en sa possession, l’expéditeur peut générer des codes OTP à usages uniques afin de s’identifier lors de l’envoi d’une LRE 100% électronique.
+
+    Vous pouvez générer vous-même vos codes OTP :
+    -  En téléchargeant Google Authenticator (sur l’App store ou le Google Play store), vous scannez le QR code du document et le code OTP à saisir s’affiche.
+    -  En passant par un générateur de codes : <https://otp-client.ar24.fr/>
+    -  En intégrant un générateur de codes OTP directement dans votre logiciel, basé sur votre clé d’authentification.
+
+    Vous pouvez retrouver des exemples de librairies pour l’auto-génération du code OTP :
+
+    - <https://github.com/arcanericky/ga-cmd> en ligne de commande
+    - <http://www.nongnu.org/oath-toolkit/oathtool.1.html> en ligne de commande
+    - <https://github.com/gbraad/gauth> avec un exemple utilisable en ligne : <https://gauth.apps.gbraad.nl/>
+    - <https://github.com/qoomon/otp-authenticator-webapp> avec un exemple utilisable en ligne : <https://qoomon.github.io/otp-authenticator-webapp/>
+    - <https://github.com/jiangts/JS-OTP> avec un exemple utilisable en ligne : <https://jiangts.github.io/JS-OTP/>
+    - et d’autres exemples en fonction de votre langage de programmation : <https://github.com/search?q=totp+generator>
+
+  version: "1.48"
+servers:
+  - url: 'https://api.maileva.com/electronic_mail_emitter/v1'
+    description: Prod
+  - url: 'https://api.sandbox.maileva.net/electronic_mail_emitter/v1'
+    description: Sandbox
+
+paths:
+  /senders:
+    post:
+      tags:
+        - Senders
+      summary: Créer un expéditeur
+      description: Permet de créer un expéditeur qui sera nécessaire pour faire des envois électroniques.
+      operationId: createSender
+      requestBody:
+        description: Nouvel expéditeur
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SenderResource'
+        required: true
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: url resource
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderResponse'
+        '202':
+          description: Accepted
+          headers:
+            Location:
+              description: url resource
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict
+    get:
+      tags:
+        - Senders
+      summary: Liste des expéditeurs
+      description: Permet de visualiser les expéditeurs liés au client.
+      parameters:
+        - name: start_index
+          in: query
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 20
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderResponses'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  '/senders/{sender_id}':
+    get:
+      tags:
+        - Senders
+      summary: Détail d'un expéditeur
+      description: Permet de visualiser un expéditeur.
+      operationId: getSender
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    patch:
+      tags:
+        - Senders
+      summary: Modifier un expéditeur
+      description: Permet de modifier un expéditeur.
+      operationId: updateSender
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SenderUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderUpdate'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  '/senders/{sender_id}/change_owner':
+    post:
+      tags:
+        - Senders
+      summary: Modifier le service de rattachement de l'utilisateur
+      description: Permet à l'expéditeur de changer de service tout en gardant son compte expéditeur et son code d'identification LRE
+      operationId: changeOwner
+      requestBody:
+        description: Nouveau login utilisateur.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeOwner'
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Sender not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/senders/{sender_id}/grant_access':
+    post:
+      tags:
+        - Senders
+      summary: Rattacher un compte expéditeur AR24 existant à l'expéditeur
+      description: Permet de rattacher un compte expéditeur AR24 existant à l'expéditeur
+      operationId: linkemail
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Sender not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  '/senders/{sender_id}/verify_identity':
+    post:
+      tags:
+        - Senders
+      summary: Commande d'une clé OTP
+      description: Permet de commander une clé OTP pour l'expéditeur correspondant à son identité numérique. Il recevra son courrier recommandé entre 2 et 8 jours.
+      operationId: orderOtp
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Sender not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/senders/{sender_id}/revoke_identity':
+    post:
+      tags:
+        - Senders
+      summary: Révoquer un courrier contenant la clé OTP
+      description: Permet de révoquer son identité en supprimant la clé OTP afin de rendre inutilisable une clé OTP perdue ou volée.
+      operationId: revokeIdentity
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/senders/{sender_id}/authenticate_by_otp':
+    post:
+      tags:
+        - Senders
+      summary: Validation de la clé OTP
+      description: Permet de valider le code à usage unique généré par l'utilisateur. Ce code à usage unique est valable 1 heure.
+      operationId: authenticateByOtp
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+        - name: otp_code
+          in: query
+          description: code otp
+          required: true
+          schema:
+            type: string
+          example: 123456
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpirationDateResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Sender not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  '/senders/{sender_id}/authenticate_by_certificate':
+    post:
+      tags:
+        - Senders
+      summary: Sauvegarde de la clé OTP
+      description: Permet d'enregistrer le code à 32 caractères. Ce code est valable 30 jours et permet de générer des hashs pour les envois lreq.
+      operationId: authenticateByCertificate
+      requestBody:
+        description: Sauvegarde d'un certificat.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Certificate'
+      parameters:
+        - name: sender_id
+          in: path
+          description: Identifiant de l'expéditeur
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Sender not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+components:
+  schemas:
+    ErrorDto:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    ErrorsDto:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDto'
+    ExpirationDateResponse:
+      type: object
+      properties:
+        expiration_date:
+          type: string
+    ActionResource:
+      type: object
+      properties:
+        user_login:
+          type: string
+          description: Login de l'utilisateur
+        date:
+          type: string
+          description: Date de l'action
+      description: Informations sur la dernière modification
+    SenderResponse:
+      required:
+        - address1
+        - city
+        - country
+        - email
+        - first_name
+        - last_name
+        - legal_status
+        - title
+      type: object
+      properties:
+        title:
+          pattern: ^(MRS|MR)$
+          type: string
+          description: Civilité de l'expéditeur
+        legal_status:
+          pattern: ^(PROFESSIONAL|INDIVIDUAL)$
+          type: string
+          description: Type d'expéditeur
+        first_name:
+          type: string
+          description: Prénom de l'expéditeur
+        last_name:
+          type: string
+          description: Nom de l'expéditeur
+        email:
+          pattern: '^[\w]{1,}[\w.+-]{0,}@[\w-]{2,}([.][a-zA-Z]{2,}|[.][\w-]{2,}[.][a-zA-Z]{2,})+$'
+          type: string
+          example: test@gmail.com
+          description: Email de l'expéditeur
+        company_name:
+          maxLength: 38
+          minLength: 0
+          type: string
+          description: Nom de l'entreprise de l'expéditeur
+        company_siret:
+          pattern: '^\d{14}$'
+          type: string
+          description: Siret de l'entreprise de l'expéditeur
+        country:
+          pattern: '^[A-Za-z]{2}$'
+          type: string
+          description: Pays de l'expéditeur
+        address1:
+          type: string
+          description: Adresse de l'expéditeur
+        address2:
+          type: string
+          description: Adresse (ligne 2) de l'expéditeur
+        address3:
+          type: string
+          description: Adresse (ligne 3) de l'expéditeur
+        zip_code:
+          type: string
+          description: Code postal de l'expéditeur
+        city:
+          type: string
+          description: Ville de l'expéditeur
+        email_validated:
+          type: boolean
+          description: L'email de l'expéditeur est confirmé ou à confirmer.
+        notify_deposit_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preueve de dépôt == > une notification e-mail est envoyée lorsqu'une preuve de dépôt est disponible pour un destinataire.
+          default: true
+        notify_acknowledgement_of_receipt:
+          type: boolean
+          description: Notification de disponibilité d'un accusé de récéption ==> une notification e-mail est envoyée lorsqu'un accusé de reception est disponible pour un destinataire.
+          default: true
+        notify_not_claimed_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de non réclamation du courrier par le destinataire ==> une notification e-mail est envoyée lorsqu'une preuve de non réclamation est disponible pour un destinataire.
+          default: true
+        notify_refused_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de refus ==> une notification e-mail est envoyée lorsqu'une preuve de refus est disponible pour un destinataire.
+          default: true
+        notify_consent_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de consentement ==> une notification e-mail est envoyée lorsqu'une preuve de consentement est disponible pour un destinataire.
+          default: false
+        notify_waiting_ar_answer:
+          type: boolean
+          description: Notification contenant la liste des LRE en attente ==> une notification e-mail est envoyée deux fois par semaine avec la liste des LRE en attente pour tous les destinataires.
+          default: false
+        id:
+          type: string
+          description: Id de l'expéditeur
+        status:
+          $ref: '#/components/schemas/StatusResource'
+        provider_grant_access:
+          type: boolean
+          description: L'expediteur a demandé le rattachement de son compte au token Maileva
+        created_by:
+          $ref: '#/components/schemas/ActionResource'
+        modified_by:
+          $ref: '#/components/schemas/ActionResource'
+        code_client:
+          type: string
+          description: Code client Maileva
+        tracking_number:
+          type: string
+        certificate_end_date:
+          type: string
+        has_certificate:
+          type: boolean
+        old_senders:
+          type: array
+          items:
+            $ref: '#/components/schemas/OldSenderResponse'
+    Paging:
+      type: object
+      properties:
+        prev:
+          type: string
+        next:
+          type: string
+        total_results:
+          type: integer
+          format: int64
+    SenderResponses:
+      type: object
+      properties:
+        senders:
+          type: array
+          items:
+            $ref: '#/components/schemas/SenderResponse'
+        paging:
+          $ref: '#/components/schemas/Paging'
+
+    OldSenderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: id du changement d'owner
+        change_date:
+          type: string
+          description: Date du changement d'owner
+          format: datetime
+          example: '2018-03-14T07:21:40.757Z'
+        old_user_login:
+          type: string
+          description: Ancien user login
+
+    StatusResource:
+      type: string
+      description: >-
+        Statut de validation de l'email expéditeur : <table border="1">
+        <tr><td>VALIDATED</td>
+        <td>L'expéditeur est au statut validé, son compte est paramétré</td></tr>
+        <tr><td>VALIDATING</td>
+        <td>L'expéditeur est au statut en cours de validation, il dispose de 60 min pour cliquer sur le lien de vérification de son email pour que le paramétrage de son compte soit validé</td></tr>
+        <tr><td>EXPIRED</td>
+        <td>L'expéditeur est au statut expiré, le lien de vérification a expiré. L'expéditeur doit de nouveau paramétrer son compte</td></tr>
+        <tr><td>ACCESS_GRANTING</td>
+        <td>L'expéditeur est au statut en cours de rattachement au compte Maileva. L'adresse email de l'expéditeur est déjà connu du partenaire et l'expéditeur doit effectuer une action pour accepter de rattacher son compte expéditeur au compte Maileva</td></tr>
+        </table>
+      enum:
+        - VALIDATED
+        - VALIDATING
+        - EXPIRED
+        - ACCESS_GRANTING
+    ChangeOwner:
+      type: object
+      properties:
+        target_user_login:
+          type: string
+          description: Nouveau login
+    Certificate:
+      type: object
+      properties:
+        certificate:
+          type: string
+          description: Code à 32 caractères
+          example: KCCPMRYZ8CY9B6EHGF5H23HKLNOGBSPM
+          maxLength: 32
+          minLength: 32
+    SenderResource:
+      required:
+        - address1
+        - city
+        - country
+        - email
+        - first_name
+        - last_name
+        - legal_status
+        - title
+      type: object
+      properties:
+        title:
+          pattern: ^(MRS|MR)$
+          type: string
+          description: Civilité de l'expéditeur
+        legal_status:
+          pattern: ^(PROFESSIONAL|INDIVIDUAL)$
+          type: string
+          description: Type d'expéditeur
+        first_name:
+          type: string
+          description: Prénom de l'expéditeur
+        last_name:
+          type: string
+          description: Nom de l'expéditeur
+        email:
+          pattern: '^[\w]{1,}[\w.+-]{0,}@[\w-]{2,}([.][a-zA-Z]{2,}|[.][\w-]{2,}[.][a-zA-Z]{2,})+$'
+          type: string
+          example: test@gmail.com
+          description: Email de l'expéditeur
+        company_name:
+          maxLength: 38
+          minLength: 0
+          type: string
+          description: Nom de l'entreprise de l'expéditeur
+        company_siret:
+          pattern: '^\d{14}$'
+          type: string
+          description: Siret de l'entreprise de l'expéditeur
+        country:
+          pattern: '^[A-Za-z]{2}$'
+          type: string
+          description: Pays de l'expéditeur
+        address1:
+          type: string
+          description: Adresse de l'expéditeur
+        address2:
+          type: string
+          description: Adresse (ligne 2) de l'expéditeur
+        address3:
+          type: string
+          description: Adresse (ligne 3) de l'expéditeur
+        zip_code:
+          type: string
+          description: Code postal de l'expéditeur
+        city:
+          type: string
+          description: Ville de l'expéditeur
+        email_validated:
+          type: boolean
+          description: L'email de l'expéditeur est confirmé ou à confirmer.
+        notify_deposit_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preueve de dépôt == > une notification e-mail est envoyée lorsqu'une preuve de dépôt est disponible pour un destinataire.
+          default: true
+        notify_acknowledgement_of_receipt:
+          type: boolean
+          description: Notification de disponibilité d'un accusé de récéption ==> une notification e-mail est envoyée lorsqu'un accusé de reception est disponible pour un destinataire.
+          default: true
+        notify_not_claimed_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de non réclamation du courrier par le destinataire ==> une notification e-mail est envoyée lorsqu'une preuve de non réclamation est disponible pour un destinataire.
+          default: true
+        notify_refused_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de refus ==> une notification e-mail est envoyée lorsqu'une preuve de refus est disponible pour un destinataire.
+          default: true
+        notify_consent_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de consentement ==> une notification e-mail est envoyée lorsqu'une preuve de consentement est disponible pour un destinataire.
+          default: false
+        notify_waiting_ar_answer:
+          type: boolean
+          description: Notification contenant la liste des LRE en attente ==> une notification e-mail est envoyée deux fois par semaine avec la liste des LRE en attente pour tous les destinataires.
+          default: false
+    SenderUpdate:
+      type: object
+      properties:
+        company_name:
+          maxLength: 38
+          minLength: 0
+          type: string
+        company_siret:
+          pattern: '^\d{14}$'
+          type: string
+        country:
+          pattern: '^[A-Za-z]{2}$'
+          type: string
+        address1:
+          type: string
+        address2:
+          type: string
+        address3:
+          type: string
+        zip_code:
+          type: string
+        city:
+          type: string
+        notify_deposit_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preueve de dépôt == > une notification e-mail est envoyée lorsqu'une preuve de dépôt est disponible pour un destinataire.
+          default: true
+        notify_acknowledgement_of_receipt:
+          type: boolean
+          description: Notification de disponibilité d'un accusé de récéption ==> une notification e-mail est envoyée lorsqu'un accusé de reception est disponible pour un destinataire.
+          default: true
+        notify_not_claimed_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de non réclamation du courrier par le destinataire ==> une notification e-mail est envoyée lorsqu'une preuve de non réclamation est disponible pour un destinataire.
+          default: true
+        notify_refused_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de refus ==> une notification e-mail est envoyée lorsqu'une preuve de refus est disponible pour un destinataire.
+          default: true
+        notify_consent_proof:
+          type: boolean
+          description: Notification de disponibilité d'une preuve de consentement ==> une notification e-mail est envoyée lorsqu'une preuve de consentement est disponible pour un destinataire.
+          default: false
+        notify_waiting_ar_answer:
+          type: boolean
+          description: Notification contenant la liste des LRE en attente ==> une notification e-mail est envoyée deux fois par semaine avec la liste des LRE en attente pour tous les destinataires.
+          default: false

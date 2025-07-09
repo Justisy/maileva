@@ -1,0 +1,278 @@
+openapi: 3.0.0
+###########################################################################
+#                         serveurs                                       #
+###########################################################################
+servers:
+  - url: https://connexion.maileva.com/auth/realms/services/protocol/openid-connect
+    description:  Production
+  - url: https://connexion.sandbox.maileva.net/auth/realms/services/protocol/openid-connect
+    description: Sandbox
+
+###########################################################################
+#                         Informations                                    #
+###########################################################################
+info:
+  version: "2.1"
+  title: Maileva / Authentification
+  description: |
+  
+  
+      # Description générale
+      
+      
+        L'authentification aux API Maileva est régie par un serveur d'authentification centrale qui implémente le protocole OAuth2. Le serveur d'authentification délivre des jetons d'accès (*token*). La présente documentation décrit les différentes méthodes pour obetnir un jeton.
+        
+        Ensuite, lors des appels aux API Maileva, ce jeton d'accès devra être envoyé dans l'entête HTTP Authorization de la requête de la manière suivante :
+
+      ```sh
+      Authorization: Bearer <access_token>
+      ```
+
+
+      # Identification des applications clientes
+
+        Pour qu'une application cliente (Site web, application mobile, partenaire) puisse interroger et authentifier des utilisateurs, elle doit s'enregistrer auprès de Maileva afin de pouvoir appeler (au nom de l'utilisateur connecté) les API. Maileva fournit alors un jeu d'identifiants *client_id*, *client_secret* qui permettra à l'application d'être identifiée auprès du serveur OAuth2.
+
+      # Les modes d'authentification OAuth2
+      Le protocole OAuth2 prévoit plusieurs modes d'authentification, appelés *grant_type*, suivant les cas d'utilisation.
+      
+      - `Ressource Owner Password Credentials` : ce mode est basé sur un appel serveur à serveur (machine-2-machine ou m2m) sans aucune IHM ni jeu de redirection (l'utilisateur n'étant pas forcément derrière un navigateur). Ce mode est conçu principalement pour des applications riches (dans lesquelles les redirections web ne sont pas évidentes) ou encore pour des applications souhaitant proposer leur propre IHM ou une page d'authentification autre que celle du serveur d'authentification OAuth2 Maileva. Ce mode d'authentification nécessite une qualification de la part de Maileva pour être accessible.
+
+      - `token exchange` : ce mode est utilisé pour obtenir un jeton pour un utilisateur à partir d'un jeton administrateur. L'administrateur et l'utilisateur doivent appartenir au même contrat. Les champs subject_token et subject_token_type seront nécéssaires.
+      
+
+      # Format du jeton
+      
+        Le jeton d'accès retourné par l'application d'authentification est au format JWT ([JSON Web Token](https://jwt.io/)).
+        
+        Le format et la taille de ce jeton est succeptible d'évoluer.
+        
+      # Références
+      
+        OAuth2 RFC-6749 : https://tools.ietf.org/html/rfc6749
+        
+        OAuth2 portal : https://oauth.net/2/
+        
+        Comprendre OAuth2 : http://www.bubblecode.net/fr/2016/01/22/comprendre-oauth2/
+        
+        jwt.io : https://jwt.io/
+        
+
+###########################################################################
+#                         Components                                      #
+###########################################################################
+components:
+
+  schemas:
+  
+    Error:
+      description: Description de l'erreur
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+  
+    Errors:
+      description: Liste des erreurs
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+  
+    Token_Response:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Jeton d'accès à utiliser lors des appels API 
+        expires_in:
+          type: integer
+          description: Délai d'expiration du token (en secondes)
+        refresh_expires_in:
+          type: integer
+          description: Délai d'expiration du token de rafraichissement (en secondes)
+        refresh_token:
+          type: string
+          description: Jeton de rafraichissement à utiliser quand le jeton d'accès est expiré et avant que le jeton de rafraichissement soit expiré
+        token_type:
+          type: string
+          description: Type de jeton (toujours Bearer pour Maileva)
+        id_token:
+          type: string
+          description: Usage interne
+        not-before-policy:
+          type: integer
+          description: Usage interne
+        session_state scope:
+          type: string
+          description: Usage interne
+
+###############################################################################
+#                                   Paths                                     #
+###############################################################################
+paths:
+
+  /token:
+    post:
+      summary: demande de jeton d'authentification
+      description: |-
+        Permet d'obtenir un jeton d'authentification OAuth2 utilisant le mode d'authentification `Ressource Owner Password Credentials` de demander un `rafraichisssement de jeton`.
+        Il est aussi possible de faire un `échange de jeton` à condition de demander les droits nécessaires aupès du service client.
+        
+        Mode `Ressource Owner Password Credentials`  
+        Le paramètre *grant_type* doit être positionné à *password*.
+        Les paramètres *username*,  *password*, *client_id* et *client_secret* sont obligatoires.
+      
+  
+        Mode `token exchange`
+        Cela se passe en trois étapes : 
+
+        #### Appel 1 : demander un jeton en tant qu’admin ####
+        
+        ```
+        curl --location 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+             --header 'Content-Type: application/x-www-form-urlencoded' \
+             --data-urlencode 'grant_type=password' \
+             --data-urlencode 'client_id=appli.123' \
+             --data-urlencode 'client_secret=mdp123' \
+             --data-urlencode 'username=login_admin' \
+             --data-urlencode 'password=mdp_admin'
+        ```
+
+        #### Appel 2 : demander à faire du "token exchange" en fournissant le jeton de l’appel 1. ####
+        ```
+        curl --location 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+             --header 'Content-Type: application/x-www-form-urlencoded' \
+             --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+             --data-urlencode 'client_id=appli.123' \
+             --data-urlencode 'client_secret=mdp123' \
+             --data-urlencode 'subject_token=token_issu_de_appel_1' \
+             --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:access_token'
+        ```
+
+        #### Appel 3 : préciser l’utilisateur sur lequel se substituer en fournissant le jeton de l’appel 2 ainsi que le login de l'utilisateur ####
+        ```
+        curl --location 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+             --header 'Content-Type: application/x-www-form-urlencoded' \
+             --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+             --data-urlencode 'client_id=appli.123' \
+             --data-urlencode 'client_secret=mdp123' \
+             --data-urlencode 'subject_token=token_issu_de_appel_2' \
+             --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+             --data-urlencode 'requested_subject=jean.dupont'
+        ```
+
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+              properties:
+                grant_type:
+                  description: |-
+                    Mode d’authentification
+                    <table border="1">
+                      <tr bgcolor="lightgrey">
+                        <th>grant_type</th>
+                        <th>description</th>
+                      </tr>
+                      <tr>
+                        <td>password</td>
+                        <td><a href="https://auth0.com/docs/flows/resource-owner-password-flow" target="_blank">Resource Owner Password</a></td>
+                      </tr>
+                      <tr>
+                        <td>client_credentials</td>
+                        <td><a href="https://auth0.com/docs/flows/client-credentials-flow" target="_blank">Client Credentials</a>
+                          <br /><font color="red">Non implémenté pour Maileva</font></td>
+                      </tr>
+                      <tr>
+                        <td>implicit</td>
+                        <td><a href="https://auth0.com/docs/flows/implicit-flow-with-form-post" target="_blank">Implicit</a>
+                          <br /><font color="red">Non implémenté pour Maileva</font></td>
+                      </tr>
+                      <tr>
+                        <td>authorization_code</td>
+                        <td><a href="https://auth0.com/docs/flows/authorization-code-flow" target="_blank">Authorization Code</a>
+                          <br /><font color="red">Non implémenté pour Maileva</font></td>
+
+                      </tr>
+                      <tr>
+                        <td>refresh_token</td>
+                        <td><a href="https://auth0.com/docs/tokens/refresh-tokens/use-refresh-tokens" target="_blank">Refresh Token</a></td>
+                      </tr>
+                      <tr>
+                        <td>urn:ietf:params:oauth:grant-type:token-exchange</td>
+                        <td>Token Exchange</td>
+                      </tr>
+                    </table>
+                  type: string
+                  enum:
+                    - password
+                    - client_credentials
+                    - implicit
+                    - authorization_code
+                    - refresh_token
+                    - urn:ietf:params:oauth:grant-type:token-exchange
+
+                username:
+                  description: Identifiant de l’utilisateur Maileva
+                  type: string
+                  example: jean.dupont
+                password:
+                  description: Mot de passe de l’utilisateur Maileva
+                  type: string
+                  example: test123
+                client_id:
+                  description: Identifiant de l'application
+                  type: string
+                  example: appli.123
+                client_secret:
+                  description: Mot de passe de l'application
+                  type: string
+                  example: mdp123
+                subject_token: 
+                  description: Jeton utilisé pour faire du "token exchange"
+                  type: string
+                  example: todo
+                subject_token_type:
+                  description: Indiquer 'urn:ietf:params:oauth:token-type:access_token' pour du "token exchange"
+                  type: string
+                  example: "urn:ietf:params:oauth:token-type:access_token"
+                requested_token_type:
+                  description: Indiquer 'urn:ietf:params:oauth:token-type:access_token' pour du "token exchange"
+                  type: string
+                  example: "urn:ietf:params:oauth:token-type:access_token"
+                requested_subject:
+                  description: Utilisateur pour lequel on demande un "token exchange"
+                  type: string
+                  example: jean.dupont
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token_Response'
+        400:
+          description: (Bad request)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+        401:
+          description: (Unauthorized) les identifiants de l'application cliente ou les  identifiants de l'utilisateur sont invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+        403:
+          description: (Forbidden) l'application cliente n'est pas autorisée ou n'est pas enregistrée sur le mode `Ressource Owner Password Credentials` ou `Client Credentials`
+        404:
+          description: (Bad Request) un des paramètres requis est manquant

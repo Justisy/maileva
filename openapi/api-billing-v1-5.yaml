@@ -1,0 +1,1049 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://api.maileva.com/billing/v1'
+    description: Production
+info:
+  version: '1.5'
+  title: Maileva / Suivi de facturation
+  description: |
+    Cette API de suivi de facturation permet de récuperer les factures, le détail des facture et le PDF des factures.
+    
+    Les principales ressources de cette API sont :
+    - invoices : factures
+    - items : lignes de facturation (détaillées par destinataires)
+    - recipient_items : lignes de facturation (détaillées par envois)
+    - invoice_documents : pièces comptables
+
+    Ces données sont actualisées le 15 de chaque mois.
+
+security:
+  - bearerAuth: []
+  - oAuth2PasswordProduction: []
+  - oAuth2PasswordSandbox: []
+
+paths:
+
+  /invoices:
+    get:
+      summary: Liste des factures
+      description: |
+        Permet de récupérer la liste des factures du compte client de l'utilisateur connecté
+      tags: 
+        - invoices
+      parameters:
+        - $ref: '#/components/parameters/start_index'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/desc'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/start_date'
+        - $ref: '#/components/parameters/end_date'
+        - $ref: '#/components/parameters/date'
+        - $ref: '#/components/parameters/reference'
+        - $ref: '#/components/parameters/invoice_type'
+        - $ref: '#/components/parameters/amount'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/invoices'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /items:
+    get:
+      summary: Liste des lignes de facturation (détaillées par envoi)
+      description: |
+        Permet de récupérer les lignes de facturation détaillées du compte client de l'utilisateur connecté
+      tags: 
+        - items
+      parameters:
+        - $ref: '#/components/parameters/start_index'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/desc'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/start_valorization_date'
+        - $ref: '#/components/parameters/end_valorization_date'
+        - $ref: '#/components/parameters/item_type'
+        - $ref: '#/components/parameters/invoice_date'
+        - $ref: '#/components/parameters/valorization_date'
+        - $ref: '#/components/parameters/user_reference'
+        - $ref: '#/components/parameters/request_reference'
+        - $ref: '#/components/parameters/quantity'
+        - $ref: '#/components/parameters/unit_price'
+        - $ref: '#/components/parameters/amount'
+        - $ref: '#/components/parameters/code'
+        - $ref: '#/components/parameters/label'
+        - $ref: '#/components/parameters/category'
+        - $ref: '#/components/parameters/invoice_reference'   
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/items'
+            text/csv:
+              schema:
+                type: string
+                description: Fichier CSV contenant les items
+                format: binary
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+ 
+  /items/exports:
+    post:
+      summary: Export des lignes de facturation (détaillées par envoi)
+      description: |
+        Permet de demander l'export les lignes de facturation détaillées dans un fichier
+      tags: 
+        - items
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/items_export'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/items_export_input'
+
+  /items/exports/{export_id}:
+    get:
+      summary: Détail d'un export de lignes de facturation (détaillées par envoi)
+      description: |
+        Permet de récupérer le détail d'un export de fichier
+      parameters:
+        - $ref: '#/components/parameters/export_id'
+      tags: 
+        - items
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/items_export'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /recipient_items:
+    get:
+      summary: Liste des lignes de facturation (détaillées par destinataire)
+      description: |
+        Permet de récupérer les lignes de facturation détaillées du compte client de l'utilisateur connecté
+      tags: 
+        - recipient_items
+      parameters:
+        - $ref: '#/components/parameters/start_valorization_date'
+        - $ref: '#/components/parameters/end_valorization_date'
+        - $ref: '#/components/parameters/start_index'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/desc'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/items'
+            text/csv:
+              schema:
+                type: string
+                description: Fichier CSV contenant les items
+                format: binary
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /recipient_items/exports:
+    post:
+      summary: Export des lignes de facturation (détaillées par destinataire)
+      description: |
+        Permet de demander l'export les lignes de facturation détaillées dans un fichier
+      tags: 
+        - recipient_items
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/items_export'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/items_export_input'
+
+  /recipient_items/exports/{export_id}:
+    get:
+      summary: Détail d'un export de lignes de facturation (détaillées par destinataire)
+      description: |
+        Permet de récupérer le détail d'un export de fichier
+      parameters:
+        - $ref: '#/components/parameters/export_id'
+      tags: 
+        - recipient_items
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/items_export'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /invoice_documents:
+    get:
+      summary: Liste des documents de facturation
+      description: |
+        Permet de récupérer les fichiers de facturation
+      tags: 
+        - invoice_documents
+      parameters:
+        - $ref: '#/components/parameters/start_index'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/desc'
+        - $ref: '#/components/parameters/fields'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/invoice_documents'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /invoice_documents/{invoice_document_id}/download:
+    post:
+      summary: Téléchargement d'un document de facturation
+      description: |
+        Permet de générer un lien public de téléchargement du fichier de facturation
+      tags: 
+        - invoice_documents
+      parameters:
+        - $ref: '#/components/parameters/invoice_document_id'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/invoice_documents_download'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /invoice_documents/exports:
+    post:
+      summary: Export des documents de facturation
+      description: |
+        Permet de générer un lien public de téléchargement d'un zip contenant plusieurs factures
+      tags: 
+        - invoice_documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/invoice_documents_export_input'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/invoice_documents_export'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          
+components:
+  securitySchemes:
+    bearerAuth:
+      description: "Indiquez le token directement obtenu via la méthode suivante :
+        
+        curl -X POST 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+        -u 'my_client_id:my_client_secret' \
+        -d 'grant_type=password&username=my_user_login&password=my_user_password' \
+        -v"
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oAuth2PasswordProduction:
+      description: authentification oAuth2 en mode password sur l'environnment de production
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: CRUD on ressources
+    oAuth2PasswordSandbox:
+      description: authentification oAuth2 en mode password sur l'environnment Sandbox
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.sandbox.maileva.net/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: CRUD on ressources
+
+  parameters:
+    fields:
+      name: fields
+      in: query
+      description: liste des champs à afficher
+      required: false
+      schema:
+        type: string
+    operation_id:
+      name: operation_id
+      in: path
+      description: Identifiant de l'opération
+      required: true
+      schema:
+        type: string
+    export_id:
+      name: export_id
+      in: path
+      description: Identifiant de l'export
+      required: true
+      schema:
+        type: string
+    invoice_document_id:
+      name: invoice_document_id
+      in: path
+      description: Identifiant du fichier de facturation
+      required: true
+      schema:
+        type: string
+    filtres:
+      name: \nom du champ\
+      in: query
+      description: valeur du champ a filter
+      required: false
+      schema:
+        type: string
+    sort:
+      name: sort
+      in: query
+      description: liste des champs a trier ASC séparé par une virgule
+      required: false
+      schema:
+        type: string
+    desc:
+      name: desc
+      in: query
+      description: 'liste des champs a trier DESC séparé par une virgule, ils doivent être dans le paramètre ''sort'''
+      required: false
+      schema:
+        type: string
+    start_index:
+      name: start_index
+      in: query
+      description: Indique le premier élément à retourner
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    count:
+      name: count
+      in: query
+      description: Indique le nombre d'éléments maximum à retourner
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 20
+    start_date:
+      name: start_date
+      in: query
+      description: Date de début de facturation. Premier jour du mois précédent par défaut.
+      schema:
+        type: string
+        format: date
+    end_date:
+      name: end_date
+      in: query
+      description: Date de fin de facturation. Dernier jour du mois précédent par défaut.
+      schema:
+        type: string
+        format: date
+    start_invoice_date:
+      name: start_invoice_date
+      in: query
+      description: Date de début de facturation. Premier jour du mois précédent par défaut.
+      schema:
+        type: string
+        format: date
+    end_invoice_date:
+      name: end_invoice_date
+      in: query
+      description: Date de fin de facturation. Dernier jour du mois précédent par défaut.
+      schema:
+        type: string
+        format: date
+    start_valorization_date:
+      name: start_valorization_date
+      in: query
+      description: Date de début de valorisation. Premier jour du mois précédent par défaut.
+      schema:
+        type: string
+        format: date
+    end_valorization_date:
+      name: end_valorization_date
+      in: query
+      description: Date de fin de valorisation. Dernier jour du mois précédent par défaut.
+      schema:
+        type: string
+        format: date
+    item_type:
+      name: type
+      in: query
+      description: Type de l'item
+      schema:
+        type: string
+        enum:
+          - USER_REQUEST
+          - ACCOUNT_REQUEST
+          - DISCOUNT
+          - SUBSCRIPTION
+          - CREDIT
+          - DIFFERENCE
+          - OTHER
+    invoice_date:
+      name: invoice_date
+      in: query
+      description: Date de facturation (format AAAA-MM-JJ)
+      schema:
+        type: string
+        format: date
+    valorization_date:
+      name: valorization_date
+      in: query
+      description: Date de valorisation (format AAAA-MM-JJ)
+      schema:
+        type: string
+        format: date
+    user_reference:
+      name: user_reference
+      in: query
+      description: Reférence de l'utilisateur
+      schema:
+        type: string
+    user_login:
+      name: user_login
+      in: query
+      description: Login de l'utilisateur
+      schema:
+        type: string
+    request_reference:
+      name: request_reference
+      in: query
+      description: Reférence de la demande
+      schema:
+        type: string
+    request_name:
+      name: request_name
+      in: query
+      description: Nom de la demande (nom de campagne)
+      schema:
+        type: string
+    quantity:
+      name: quantity
+      in: query
+      description: quantité
+      schema:
+        type: integer
+    unit_price:
+      name: unit_price
+      in: query
+      description: prix unitaire HT
+      schema:
+        type: number
+    amount:
+      name: amount
+      in: query
+      description: Montant HT en euros
+      schema:
+        type: number
+    code:
+      name: code
+      in: query
+      description: code article
+      schema:
+        type: string
+    label:
+      name: label
+      in: query
+      description: libellé du code article 
+      schema:
+        type: string
+    category:
+      name: category
+      in: query
+      description: Catégorie du code article
+      schema:
+        type: string
+    invoice_reference:
+      name: invoice_reference
+      in: query
+      description: Numéro de facture
+      schema:
+        type: string
+    date:
+      name: date
+      in: query
+      description: Date de facturation
+      schema:
+        type: string
+        format: date
+    reference:
+      name: reference
+      in: query
+      description: Numéro de facture
+      schema:
+        type: string
+    invoice_type:
+      name: type
+      in: query
+      description: Type de facture
+      schema:
+        type: string
+        enum: 
+        - CREDIT
+        - CLE
+        - MBF
+        - MLV_LRE_SERVICE
+        - MLV_SERVICE
+        - POP_SERVICE
+        - POP_LRE_SERVICE
+        - SIGNATURE
+        - POP_LRE_POSTAGE
+        - POP_POSTAGE
+        - MLV_POSTAGE
+        - MLV_LRE_POSTAGE
+    id:
+      name: id
+      in: query
+      description: Identifiant
+      schema:
+        type: string        
+
+
+  schemas:
+
+    invoices:
+      description: Liste de factures
+      type: object
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/invoice'
+        paging:
+          $ref: '#/components/schemas/paging'
+      
+    invoice:
+      description: Facture
+      type: object
+      properties:
+        id:
+          type: string
+          description: identifiant de la facture
+          format: UUID
+        date:
+          description: Date de facturation
+          type: string
+          format: date
+        reference:
+          description: Numéro de facture
+          type: string
+        type:
+          description: Type de facture
+          type: string
+          enum: 
+          - CREDIT
+          - CLE
+          - MBF
+          - MLV_LRE_SERVICE
+          - MLV_SERVICE
+          - POP_SERVICE
+          - POP_LRE_SERVICE
+          - SIGNATURE
+          - POP_LRE_POSTAGE
+          - POP_POSTAGE
+          - MLV_POSTAGE
+          - MLV_LRE_POSTAGE
+        amount: 
+          description: Montant hors taxe en euros
+          type: number
+        items_href:
+          description: Lien vers la liste des lignes de facturation
+          type: string
+
+    items:
+      description: Liste des lignes de facturation
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/item'
+        paging:
+          $ref: '#/components/schemas/paging'
+    
+    item:
+      description: Ligne de facturation
+      type: object
+      properties:
+        id:
+          description: Identifiant de l'item
+          type: string
+        type:
+          description: Type de l'item
+          type: string
+          enum:
+            - USER_REQUEST
+            - ACCOUNT_REQUEST
+            - DISCOUNT
+            - SUBSCRIPTION
+            - CREDIT
+            - DIFFERENCE
+            - OTHER
+        customer_code:
+          description: Code du client
+          type: string
+        invoice_date:
+          description: Date de facturation (format AAAA-MM-JJ)
+          type: string
+          format: date
+        valorization_date:
+          description: Date de valorisation (format AAAA-MM-JJ)
+          type: string
+          format: date
+        user_reference:
+          description: Reférence de l'utilisateur
+          type: string
+        user_login:
+          description: Login de l'utilisateur
+          type: string
+        request_reference:
+          description: Reférence de la demande
+          type: string
+        request_name:
+          description: Nom de la demande (nom de campagne)
+          type: string
+        quantity:
+          description: quantité
+          type: integer
+        unit_price:
+          description: prix unitaire HT
+          type: number
+        amount:
+          description: Montant HT en euros
+          type: number
+        code:
+          description: code article
+          type: string
+        label:
+          description: libellé du code article 
+          type: string
+        category:
+          description: Catégorie du code article
+          type: string
+        invoice_reference:
+          description: Numéro de facture
+          type: string
+
+    items_export_input:
+      description: Paramètres de l'export de fichier
+      type: object
+      required:
+        - mime_type
+      properties:
+        mime_type:
+          $ref: '#/components/schemas/items_mime_type'
+        file_name:
+          description: Nom du fichier généré
+          type: string
+          maxLength: 50
+        max_download:
+          description: Nombre de téléchargements maximum
+          type: number
+          format: integer
+          default: 1
+        life_duration:
+          description: Durée de disponibilité du fichier en secondes
+          type: number
+          format: integer
+          default: 3600
+        charset_encoding:
+          description: Encodage du fichier d'export
+          type: string
+          enum:
+            - ANSI
+            - UTF-8
+          default: ANSI
+        filters:
+          $ref: '#/components/schemas/filters'
+
+    invoice_documents_export_input:
+      description: Paramètres de l'export des factures
+      type: object
+      properties:
+        max_download:
+          description: Nombre de téléchargement maximum
+          type: number
+          format: integer
+          default: 1
+        life_duration:
+          description: Durée de disponibilité du fichier en secondes
+          type: number
+          format: integer
+          default: 3600
+        filters:
+          $ref: '#/components/schemas/filters_invoice_documents'
+    
+    invoice_documents_export:
+      description: Export de factures
+      type: object
+      properties:
+        id:
+          description: Identifiant de l'export de factures
+          type: string
+          format: UUID
+        mime_type:
+          type: string
+          enum: 
+            - application/zip
+        max_download:
+          description: Nombre de téléchargement maximum
+          type: number
+          format: integer
+          default: 1
+        downloading_count:
+          description: Nombre de téléchargement
+          type: number
+          format: integer
+        life_duration:
+          description: Durée de disponibilité du fichier en secondes
+          type: number
+          format: integer
+          default: 3600
+        status:
+          $ref: '#/components/schemas/export_status'
+        status_date: 
+          description: Date du statut
+          type: string
+          format: datetime
+        creation_date: 
+          description: Date de création
+          type: string
+          format: datetime
+        download_href:
+          description: Lien de téléchargement du fichier
+          type: string
+          format: URL
+        filters:
+          $ref: '#/components/schemas/filters_invoice_documents'
+    
+    filters_invoice_documents:
+      allOf:
+        - $ref: '#/components/schemas/invoice_document'
+        - type: object
+          properties:
+            start_invoice_date:
+              description: Date de début de facturation
+              type: string
+              format: date
+            end_invoice_date:
+              description: Date de fin de facturation
+              type: string
+              format: date
+    
+    items_export:
+      description: Export de fichier
+      type: object
+      properties:
+        id:
+          description: Identifiant de l'export de fichier
+          type: string
+          format: UUID
+        mime_type:
+          $ref: '#/components/schemas/items_mime_type'
+        file_name:
+          description: Nom du fichier généré
+          type: string
+          maxLength: 50
+        max_download:
+          description: Nombre de téléchargement maximum
+          type: number
+          format: integer
+          default: 1
+        downloading_count:
+          description: Nombre de téléchargement
+          type: number
+          format: integer
+        life_duration:
+          description: Durée de disponibilité du fichier en secondes
+          type: number
+          format: integer
+          default: 3600
+        status:
+          $ref: '#/components/schemas/export_status'
+        status_date: 
+          description: Date du statut
+          type: string
+          format: datetime
+        creation_date: 
+          description: Date de création
+          type: string
+          format: datetime
+        user_login:
+          type: string
+          description: Login qui a généré l'export
+        download_href:
+          description: Lien de téléchargement du fichier
+          type: string
+          format: URL
+        filters:
+          $ref: '#/components/schemas/filters'
+
+    filters:
+      allOf:
+        - $ref: '#/components/schemas/item'
+        - type: object
+          properties:
+            start_valorization_date:
+              description: Date de début de valorisation
+              type: string
+              format: date
+            end_valorization_date:
+              description: Date de fin de valorisation
+              type: string
+              format: date
+            start_invoice_date:
+              description: Date de début de facturation
+              type: string
+              format: date
+            end_invoice_date:
+              description: Date de fin de facturation
+              type: string
+              format: date
+    
+    items_mime_type:
+      description: Type de fichier
+      type: string
+      enum:
+        - text/csv
+    
+    export_status:
+      description:  Statut de l'export de fichier
+      type: string
+      enum:
+        - IN_PROGRESS
+        - AVAILABLE
+        - MAX_DOWNLOAD_REACHED
+        - EXPIRED
+        - ERROR
+
+    invoice_document:
+      type: object
+      description: Fichier de facturation
+      properties:
+        id:
+          type: string
+          format: UUID
+          description: Identifiant
+        customer_code:
+          type: string
+          description: Code client
+        invoice_date:
+          type: string
+          format: date
+          description: Date de facturation
+        invoice_reference:
+          type: string
+          description: Numéro de factures
+    
+    invoice_documents:
+      type: object
+      description: Liste de fichiers de facturation
+      properties:
+        invoice_documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/invoice_document'
+        paging:
+          $ref: '#/components/schemas/paging'
+    
+    invoice_documents_download:
+      description: Lien de téléchargement du fichier de facturation
+      type: object
+      properties:
+        id:
+          description: Identifiant du lien du fichier de facturation
+          type: string
+          format: UUID
+        mime_type:
+          type: string
+          enum: 
+            - application/pdf
+        max_download:
+          description: Nombre de téléchargement maximum
+          type: number
+          format: integer
+          default: 1
+        downloading_count:
+          description: Nombre de téléchargement
+          type: number
+          format: integer
+        life_duration:
+          description: Durée de disponibilité du fichier en secondes
+          type: number
+          format: integer
+          default: 3600
+        status:
+          $ref: '#/components/schemas/export_status'
+        status_date: 
+          description: Date du statut
+          type: string
+          format: datetime
+        creation_date: 
+          description: Date de création
+          type: string
+          format: datetime
+        download_href:
+          description: Lien de téléchargement du fichier
+          type: string
+          format: URL
+    
+    paging:
+      description: Pagination des résultats
+      type: object
+      properties:
+        next:
+          description: Page suivante
+          type: string
+        prev:
+          description: Page précédente
+          type: string
+        total_results:
+          description: Nombre de résultats
+          type: integer
+    Error:
+      description: Description de l'erreur
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    Errors:
+      description: Liste des erreurs
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,3110 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://api.sandbox.maileva.net/invoices/v1'
+    description: Sandbox
+  - url: 'https://api.maileva.com/invoices/v1'
+    description: Production
+
+info:
+  version: '1.20'
+  title: API envoi et suivi de factures
+  description: |-
+    API pour envoyer et suivre des factures.
+
+    Cette API comprend les fonctionnalités suivantes :
+
+     - Créer un envoi ;
+     - Ajouter des documents et des destinataires ;
+     - Choisir ses options selon le canal d'expédition (Courrier, Email, Chorus, Portail de publication) ;
+     - Suivre la production des envois.
+
+    Pour connaitre les notifications (webhooks) concernées par cette API, consultez la documentation de l'API <a href="/catalogue-api/notifications-webhooks/">notification_center</a>.
+
+security:
+  - bearerAuth: [ ]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      description: |-
+        Indiquez le token directement obtenu via la méthode suivante :
+        
+        curl -X POST 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+        -u 'my_client_id:my_client_secret' \
+        -d 'grant_type=password&username=my_user_login&password=my_user_password' \
+        -v
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    country_code:
+      type: string
+      description: Code du pays (Code ISO-3166)
+      enum: [ AD, AE, AF, AG, AI, AL, AM, AN, AO, AQ, AR, AS, AT, AU, AW, AX, AZ, BA, BB, BD, BE, BF, BG,
+              BH, BI, BJ, BL, BM, BN, BO, BQ, BR, BS, BT, BV, BW, BY, BZ, CA, CC, CD, CF, CG, CH, CI, CK, CL,
+              CM, CN, CO, CR, CS, CU, CV, CW, CX, CY, CZ, DE, DJ, DK, DM, DO, DZ, EC, EE, EG, EH, ER, ES, ET,
+              FI, FJ, FK, FM, FO, FR, GA, GB, GD, GE, GF, GG, GH, GI, GL, GM, GN, GP, GQ, GR, GS, GT, GU, GW,
+              GY, HK, HM, HN, HR, HT, HU, ID, IE, IL, IM, IN, IO, IQ, IR, IS, IT, JE, JM, JO, JP, KE, KG, KH,
+              KI, KM, KN, KP, KR, KW, KY, KZ, LA, LB, LC, LI, LK, LR, LS, LT, LU, LV, LY, MA, MC, MD, ME, MF,
+              MG, MH, MK, ML, MM, MN, MO, MP, MQ, MR, MS, MT, MU, MV, MW, MX, MY, MZ, NA, NC, NE, NF, NG, NI,
+              NL, NO, NP, NR, NU, NZ, OM, PA, PE, PF, PG, PH, PK, PL, PM, PN, PR, PS, PT, PW, PY, QA, RE, RO,
+              RS, RU, RW, SA, SB, SC, SD, SE, SG, SH, SI, SJ, SK, SL, SM, SN, SO, SR, SS, ST, SV, SX, SY, SZ,
+              TC, TD, TF, TG, TH, TJ, TK, TL, TM, TN, TO, TP, TR, TT, TV, TW, TZ, UA, UG, UM, US, UY, UZ, VA,
+              VC, VE, VG, VI, VN, VU, WF, WS, YE, YT, YU, ZA, ZM, ZR, ZW ]
+      example: FR
+
+    email_options:
+      type: object
+      description: Options E-mail pour l'envoi
+      required:
+        - recipient_notification_from
+        - recipient_notification_reply_to
+      properties:
+        recipient_notification_template:
+          type: string
+          format: uuid
+          description: Identifiant du template d'e-mail
+          example: 59e081d8-20ee-4336-9a1b-fd37ad9a76c1
+        recipient_notification_from:
+          type: string
+          maxLength: 50
+          description: Nom libre associé à l’adresse email de l’émetteur des factures dématérialisées
+          example: "Jean DUPONT"
+        recipient_notification_reply_to:
+          type: string
+          maxLength: 80
+          description: Adresse email de retour
+          example: "jean.dupont@gmail.com"
+        recipient_notification_sender_email:
+          type: string
+          maxLength: 80
+          description: Adresse email de l'expéditeur (seule la partie se trouvant avant le @ est personnalisable, le nom de domaine restera celui de Maileva)
+          example: "jean.dupont@notification.maileva.com"
+
+    portal_options:
+      type: object
+      description: Options Portail pour l'envoi
+      required:
+        - recipient_notification_from
+        - recipient_notification_reply_to
+      properties:
+        recipient_notification_template:
+          type: string
+          format: uuid
+          description: Identifiant du template de portail
+          example: 59e081d8-20ee-4336-9a1b-fd37ad9a76c1
+        recipient_notification_from:
+          type: string
+          maxLength: 50
+          description: Nom libre associé à l’adresse email de l’émetteur des factures dématérialisées
+          example: "Jean DUPONT"
+        recipient_notification_reply_to:
+          type: string
+          maxLength: 80
+          description: Adresse email de retour
+          example: "jean.dupont@gmail.com"
+        recipient_notification_sender_email:
+          type: string
+          maxLength: 80
+          description: Adresse email de l'expéditeur (seule la partie se trouvant avant le @ est personnalisable, le nom de domaine restera celui de Maileva)
+          example: "jean.dupont@notification.maileva.com"
+
+    delivery_statuses_response:
+      type: object
+      description: Liste des statuts de distribution
+      properties:
+        delivery_statuses:
+          type: array
+          description: >-
+
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Source</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td>C01</td>
+                <td>Chorus</td>
+                <td>Déposée</td>
+              </tr>
+              <tr>
+                <td>C02</td>
+                <td>Chorus</td>
+                <td>En cours d’acheminement vers le destinataire</td>
+              </tr>
+              <tr>
+                <td>C03</td>
+                <td>Chorus</td>
+                <td>Mise à disposition du destinataire</td>
+              </tr>
+              <tr>
+                <td>C04</td>
+                <td>Chorus</td>
+                <td>Rejetée par l’ordonnateur pour erreur dans les données d’acheminement</td>
+              </tr>
+              <tr>
+                <td>C05</td>
+                <td>Chorus</td>
+                <td>Rejetée par l’ordonnateur pour autre motif</td>
+              </tr>
+              <tr>
+                <td>C06</td>
+                <td>Chorus</td>
+                <td>Suspendue</td>
+              </tr>
+              <tr>
+                <td>C07</td>
+                <td>Chorus</td>
+                <td>Service fait</td>
+              </tr>
+              <tr>
+                <td>C08</td>
+                <td>Chorus</td>
+                <td>Mandatée /DP validée</td>
+              </tr>
+              <tr>
+                <td>C09</td>
+                <td>Chorus</td>
+                <td>Mise à disposition du comptable</td>
+              </tr>
+              <tr>
+                <td>C10</td>
+                <td>Chorus</td>
+                <td>Comptabilisée</td>
+              </tr>
+              <tr>
+                <td>C11</td>
+                <td>Chorus</td>
+                <td>Mise en paiement</td>
+              </tr>
+              <tr>
+                <td>C12</td>
+                <td>Chorus</td>
+                <td>Complétée – mise à disposition</td>
+              </tr>
+              <tr>
+                <td>C13</td>
+                <td>Chorus</td>
+                <td>Mise à disposition du premier valideur</td>
+              </tr>
+              <tr>
+                <td>C14</td>
+                <td>Chorus</td>
+                <td>Refusée par le premier valideur pour autre motif</td>
+              </tr>
+              <tr>
+                <td>C15</td>
+                <td>Chorus</td>
+                <td>Validation 1 hors délai</td>
+              </tr>
+              <tr>
+                <td>C16</td>
+                <td>Chorus</td>
+                <td>Validée par le second valideur</td>
+              </tr>
+              <tr>
+                <td>C17</td>
+                <td>Chorus</td>
+                <td>Refusée par le second valideur pour autre motif</td>
+              </tr>
+              <tr>
+                <td>C18</td>
+                <td>Chorus</td>
+                <td>Validation 2 hors délai</td>
+              </tr>
+              <tr>
+                <td>C19</td>
+                <td>Chorus</td>
+                <td>Refusée par la MOE pour autre motif</td>
+              </tr>
+              <tr>
+                <td>C20</td>
+                <td>Chorus</td>
+                <td>Refusée par le fournisseur pour autre motif</td>
+              </tr>
+              <tr>
+                <td>C21</td>
+                <td>Chorus</td>
+                <td>Associée</td>
+              </tr>
+              <tr>
+                <td>C22</td>
+                <td>Chorus</td>
+                <td>Conforme – non intégrée</td>
+              </tr>
+              <tr>
+                <td>C23</td>
+                <td>Chorus</td>
+                <td>Mise à disposition du premier valideur</td>
+              </tr>
+              <tr>
+                <td>C24</td>
+                <td>Chorus</td>
+                <td>Refusée par le premier valideur pour erreur dans les données d’acheminement</td>
+              </tr>
+              <tr>
+                <td>C25</td>
+                <td>Chorus</td>
+                <td>Mise à disposition du second valideur</td>
+              </tr>
+              <tr>
+                <td>C26</td>
+                <td>Chorus</td>
+                <td>Refusée par le second valideur pour erreur des données d’acheminement</td>
+              </tr>
+              <tr>
+                <td>C27</td>
+                <td>Chorus</td>
+                <td>Mise à disposition MOE</td>
+              </tr>
+              <tr>
+                <td>C28</td>
+                <td>Chorus</td>
+                <td>Refusée par la MOE pour erreur dans les données d’acheminement</td>
+              </tr>
+              <tr>
+                <td>C29</td>
+                <td>Chorus</td>
+                <td>Prise en compte MOE</td>
+              </tr>
+              <tr>
+                <td>C30</td>
+                <td>Chorus</td>
+                <td>Mise à disposition MOA</td>
+              </tr>
+              <tr>
+                <td>C31</td>
+                <td>Chorus</td>
+                <td>Refusée par la MOA pour erreur dans les données d’acheminement</td>
+              </tr>
+              <tr>
+                <td>C32</td>
+                <td>Chorus</td>
+                <td>Refusée par la MOA pour autre motif</td>
+              </tr>
+              <tr>
+                <td>C33</td>
+                <td>Chorus</td>
+                <td>Mise à disposition fournisseur</td>
+              </tr>
+              <tr>
+                <td>C34</td>
+                <td>Chorus</td>
+                <td>Demande de complément</td>
+              </tr>
+              <tr>
+                <td>C35</td>
+                <td>Chorus</td>
+                <td>Transmise à la MOA</td>
+              </tr>
+              <tr>
+                <td>C36</td>
+                <td>Chorus</td>
+                <td>Prise en compte par le destinataire</td>
+              </tr>
+              <tr>
+                <td>C37</td>
+                <td>Chorus</td>
+                <td>Non conforme - non intégrée</td>
+              </tr>
+              <tr>
+                <td>C38</td>
+                <td>Chorus</td>
+                <td>Prise en compte par la MOA</td>
+              </tr>
+              <tr>
+                <td>C39</td>
+                <td>Chorus</td>
+                <td>Acheminée MOA</td>
+              </tr>
+              <tr>
+                <td>C40</td>
+                <td>Chorus</td>
+                <td>Acheminée MOE</td>
+              </tr>
+              <tr>
+                <td>request</td>
+                <td>Email</td>
+                <td>Envoyé</td>
+              </tr>
+              <tr>
+                <td>delivered</td>
+                <td>Email</td>
+                <td>Délivré</td>
+              </tr>
+              <tr>
+                <td>opened</td>
+                <td>Email</td>
+                <td>Ouvert</td>
+              </tr>
+              <tr>
+                <td>click</td>
+                <td>Email</td>
+                <td>Cliqué</td>
+              </tr>
+              <tr>
+                <td>unsubscribed</td>
+                <td>Email</td>
+                <td>Désinscription</td>
+              </tr>
+              <tr>
+                <td>blocked</td>
+                <td>Email</td>
+                <td>Bloqué</td>
+              </tr>
+              <tr>
+                <td>hard_bounce</td>
+                <td>Email</td>
+                <td>Hard bounce</td>
+              </tr>
+              <tr>
+                <td>deferred</td>
+                <td>Email</td>
+                <td>Différé</td>
+              </tr>
+              <tr>
+                <td>complaint</td>
+                <td>Email</td>
+                <td>Plainte</td>
+              </tr>
+              <tr>
+                <td>soft_bounce</td>
+                <td>Email</td>
+                <td>Soft bounce</td>
+              </tr>
+              <tr>
+                <td>error</td>
+                <td>Email</td>
+                <td>Erreur</td>
+              </tr>
+              <tr>
+                <td>invalid_email</td>
+                <td>Email</td>
+                <td>Email non valide</td>
+              </tr>
+              <tr>
+                <td>unique_opened</td>
+                <td>Email</td>
+                <td>Première ouverture</td>
+              </tr>
+              <tr>
+                <td>N10</td>
+                <td>Courrier</td>
+                <td>Pli Non Distribuable (PND)</td>
+              </tr>
+            </table>
+
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+                description: Identifiant du statut de distribution
+                example: C01
+              label:
+                type: string
+                description: Statut de distribution
+                example: Déposée
+              date:
+                type: string
+                format: datetime
+                description: Date du statut de distribution
+                example: '2018-03-14T07:21:40.757Z'
+
+        paging:
+          $ref: '#/components/schemas/paging_response'
+
+
+    document_category:
+      type: string
+      description: >-
+        Catégorie du document <br/>
+        <table border="1">
+          <tr bgcolor="lightgrey">
+            <th>Code</th>
+            <th>Description</th>
+          </tr>
+          <tr><td>INVOICE</td><td>Facture</td></tr>
+          <tr><td>ATTACHMENT</td><td>Pièce jointe</td></tr>
+        </table>
+      enum:
+        - INVOICE
+        - ATTACHMENT
+      default: INVOICE
+      example: INVOICE
+
+    document_error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+              <tr><td>ATTACHMENTS_EXCEED_MAX_SIZE</td><td>Les attachements ont dépassé la taille autorisée</td></tr>
+              <tr><td>ADDRESS_LINE_1_TOO_LONG</td><td>La ligne d'adresse n°1 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_2_TOO_LONG</td><td>La ligne d'adresse n°2 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_3_TOO_LONG</td><td>La ligne d'adresse n°3 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_4_TOO_LONG</td><td>La ligne d'adresse n°4 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_5_TOO_LONG</td><td>La ligne d'adresse n°5 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_TOO_LONG</td><td>La ligne d'adresse n°6 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_WRONG_FORMAT</td><td>Le champ address_line_6 doit avoir le format [CODE_POSTAL] [VILLE], avec CODE_POSTAL sur 5 chiffres, lorsque le code pays vaut "FR"</td></tr>
+              <tr><td>ALREADY_CHECK_SENDING</td><td>La vérification de l'envoi a déjà été réalisée</td></tr>
+              <tr><td>ATTRIBUTE_EXIST</td><td>L'attribut doit être unique et il existe déjà</td></tr>
+              <tr><td>ATTRIBUTE_MANDATORY</td><td>L'attribut est obligatoire. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_NOT_FOUND</td><td>L'attribut n'est pas trouvé. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_TOO_LONG</td><td>L'attribut est trop long. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_WRONG_PARAMETER</td><td>Un attribut est incorrect. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>CHECK_OBSOLETE_AFTER_SENDING_MODIFICATION</td><td>Après modification de l'envoi, le résultat de la vérification du check, lancée auparavant, est obsolète. Il faut relancer une nouvelle vérification</td></tr>
+              <tr><td>CORRUPTED_DOCUMENT</td><td>Le document est corrompu ou contient un virus</td></tr>
+              <tr><td>COUNTRY_CODE_TOO_LONG</td><td>Le code pays est limité à 2 caractères</td></tr>
+              <tr><td>CUSTOM_ID_EMPTY</td><td>Le custom id est vide</td></tr>
+              <tr><td>CUSTOM_ID_WRONG_FORMAT</td><td>Le custom id n'est pas au bon format</td></tr>
+              <tr><td>DOCUMENT_NOT_FOUND</td><td>Le document est introuvable</td></tr>
+              <tr><td>DOCUMENT_IN_DOCUMENTS_OVERRIDE</td><td>Impossible de supprimer le document puisque des bribes de document y font référence. Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_ID_NOT_ACCEPTED</td><td>Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_NOT_ACCEPTED</td><td>Première page ou dernière page invalides pour le document spécifié</td></tr>
+              <tr><td>DOC_TYPE_NOT_ACCEPTED</td><td>Le type de document n'est pas accepté (.pdf, .doc, .docx, .rtf, .txt, .xls, .xlsx autorisés)</td></tr>
+              <tr><td>DUPLICATE_PRIORITY</td><td>Plusieurs documents ont la même priorité</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_1_OR_ADDRESS_LINE_2</td><td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_6</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ATTRIBUTE</td><td>L'attribut est vide. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>EMPTY_DOCUMENT</td><td>Le document est vide</td></tr>
+              <tr><td>EMPTY_FILE_ID</td><td>L'identifiant de fichier est vide</td></tr>
+              <tr><td>EMPTY_PRODUCTION_CENTER</td><td>Le centre de production est vide</td></tr>
+              <tr><td>EMPTY_METADATA</td><td>Les méta-données sont vides</td></tr>
+              <tr><td>EMPTY_NAME</td><td>Aucun nom d'envoi n'a été transmis</td></tr>
+              <tr><td>EMPTY_PRIORITY</td><td>Le champ priority est vide</td></tr>
+              <tr><td>EMPTY_SCHEDULED_DATE</td><td>La date d'engagement de remise en poste est manquante</td></tr>
+              <tr><td>FORBIDDEN_PRINT_SENDER_ADDRESS_WITH_SIMPLE_ENVELOPPE_WINDOWS_TYPE</td><td>L'impression de l'adresse de l'expéditeur nécessite le choix d'une enveloppe à double fenêtres</td></tr>
+              <tr><td>FORBIDDEN_TREAT_UNDELIVERED_MAIL_AND_PRINT_SENDER_ADDRESS</td><td>L'impression de l'adresse de l'expéditeur n'est pas compatible avec la gestion électronique des PND</td></tr>
+              <tr><td>INVALID_COUNTRY_CODE</td><td>Le code pays n'est pas autorisé</td></tr>
+              <tr><td>INVALID_DOCUMENTS_COUNT</td><td>Erreur lorsque l'on tente d'ajouter plus de 30 documents dans un envoi</td></tr>
+              <tr><td>INVALID_DOCUMENT_SIZE</td><td>La taille du document transmis dépasse les 20 Mo</td></tr>
+              <tr><td>INVALID_DOCUMENT_TYPE</td><td>Seuls les documents de type INVOICE peuvent apparaitre dans les bribes de documents d'un destinataire</td></tr>
+              <tr><td>INVALID_INVOICE_DATE</td><td>Date de facture ne peut pas être postérieure à la date du jour.</td></tr>
+              <tr><td>INVALID_PRIORITY</td><td>Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRODUCTION_CENTER</td><td>Le centre de production est inconnu</td></tr>
+              <tr><td>INVALID_NOTIFICATION_EMAIL</td><td>L'email est invalide.</td></tr>
+              <tr><td>INVALID_NUMBER_COUNT</td><td>Le numéro de facture associé à l'expéditeur a déjà été utilisé dans le cadre d'un destinataire Chorus</td></tr>
+              <tr><td>INVALID_RECIPIENTS_COUNT</td><td>Le nombre de destinataires est atteint</td></tr>
+              <tr><td>INVALID_SIRET</td><td>Siret invalide</td></tr>
+              <tr><td>INVALID_TOTAL_SENDING_SIZE</td><td>La somme des tailles de l'ensemble des documents dépasse 20 Mo</td></tr>
+              <tr><td>INVALID_INVOICE_DUE_DATE</td><td>La date d'échéance ne peut pas être antérieure à la date de facturation</td></tr>
+              <tr><td>INVALID_INVOICE_DUE_DATE_RANGE</td><td>La date d'échéance ne peut pas être située, postérieurement ou antérieurement, dans un intervalle de plus de 30 ans de la date du jour</td></tr>
+              <tr><td>INVALID_INVOICE_DATE_RANGE</td><td>La date de facturation ne peut pas être située, postérieurement ou antérieurement, dans un intervalle de plus de 30 ans de la date du jour</td></tr>
+              <tr><td>JSON_FORMAT_ERROR</td><td>Un problème dans le format JSON des données transmises</td></tr>
+              <tr><td>MAX_ATTRIBUTE_VALUE_EXEEDED</td><td>L'attribut ne peut pas dépasser une valeur maximale</td></tr>
+              <tr><td>METADATA_WRONG_FORMAT</td><td>Le paramètre metadata n'est pas correct</td></tr>
+              <tr><td>MISSING_FILE</td><td>Fichier à charger introuvable</td></tr>
+              <tr><td>NAME_TOO_LONG</td><td>Le nom de l'envoi est trop long (256 caractères max)</td></tr>
+              <tr><td>NO_INVOICE_ON_SENDING</td><td>Pas de facture dans l'envoi</td></tr>
+              <tr><td>NO_PARAMETER</td><td>Au moins un paramètre est requis</td></tr>
+              <tr><td>NO_RECIPIENT_ON_SENDING</td><td>Pas de destinataires dans l'envoi</td></tr>
+              <tr><td>OPERATION_IN_PROGRESS</td><td>L'opération est en cours. le résultat ne peut pas être fourni immédiatement</td></tr>
+              <tr><td>PAGES_NOT_MATCH</td><td>Incohérence entre la première page et la dernière page</td></tr>
+              <tr><td>PARAM_FILTER_NOT_ALLOWED</td><td>La valeur de l'attribut n'est pas acceptée. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>PARAM_NOT_ACCEPTED</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>POST_CHECK_MANDATORY_BEFORE_GET</td><td>Une demande de résultat d'une vérification d'un envoi a été reçue alors qu'aucune vérification n'a été lancée</td></tr>
+              <tr><td>RECIPIENT_NOT_FOUND</td><td>Ressource RECIPIENT introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>SENDING_NOT_FOUND</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>STATUS_NOT_DRAFT</td><td>Erreur quand on essaie d'ajouter un document ou un destinataire dans un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de soumettre un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de modifier une option d'un envoi qui n'est pas en état draft</td></tr>
+              <tr><td>SHEET_NUMBER_EXCEEDED</td><td>Nombre de feuilles maximales dépassé pour le type d'enveloppe</td></tr>
+              <tr><td>SIRET_ERROR</td><td>La plateforme Chorus Pro n'accepte pas le numéro de Siret</td></tr>
+              <tr><td>SIRET_RECIPIENT_COMMITMENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret, du code service exécutant et du numéro d'engagement juridique</td></tr>
+              <tr><td>SIRET_RECIPIENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret et du code service exécutant</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_DOCUMENT</td><td>Plusieurs documents ont été envoyés en multipart alors que le service limite à un document.</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_METADATA</td><td>Le paramètre metadata a été transmis plusieurs fois</td></tr>
+              <tr><td>UNEXPECTED_ERROR</td><td>Une erreur inattendue est intervenue </td></tr>
+              <tr><td>WRONG_FORMAT_ATTRIBUTE</td><td>Le format de l'attribut est incorrect</td></tr>
+              <tr><td>PICTURES_OBSOLETE_AFTER_DOCUMENTS_MODIFICATION</td><td>Après modification des documents ou documentsOverrides, les images générées auparavant sont obsolète. Il faut relancer une nouvelle pictures_request</td></tr>
+            </table>
+        message:
+          type: string
+
+    document_errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/document_error_response'
+
+    document_response:
+      type: object
+      required:
+        - id
+        - name
+        - priority
+        - type
+        - size
+      description: Les documents importés pour l'envoi
+      properties:
+        id:
+          type: string
+          description: Identifiant du document
+          example: "cbb7a0f3-bf9b-4179-9a46-c0f28d839e8d"
+        priority:
+          type: integer
+          description: "Ordre d'impression du document"
+          example: 1
+        name:
+          type: string
+          description: Nom du document
+          example: "Facture1234.pdf"
+          maxLength: 80
+        type:
+          type: string
+          description: Type du document
+          example: "application/pdf"
+        category:
+          $ref: '#/components/schemas/document_category'
+        pages_count:
+          type: integer
+          description: Nombre de pages (disponible à partir du statut ACCEPTED)
+          example: 3
+        size:
+          type: integer
+          description: Poids du document en octets
+          example: 139071
+        converted_size:
+          type: integer
+          description: Poids du document convertis en octets
+          example: 139072
+        creation_date:
+          type: string
+          format: datetime
+          description: Date de création
+          example: '2018-03-14T07:21:40.757Z'
+        modification_date:
+          type: string
+          format: datetime
+          description: Date de modification
+          example: '2018-03-14T07:21:40.757Z'
+
+    documents_override_item:
+      type: object
+      description: Bribe de document (plage de pages)
+      properties:
+        document_id:
+          type: string
+          description: Identifiant du document
+          example: '6dfe84bc-3428-43db-90b5-ff9ac3b68ac2'
+        start_page:
+          type: integer
+          description: Première page. Page 1 du document par défaut.
+          example: '1'
+        end_page:
+          type: integer
+          description: Dernière page. Dernière page du document par défaut.
+          example: '3'
+
+    documents_response:
+      type: object
+      required:
+        - documents
+        - paging
+      description: Les documents d'un envoi
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/document_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+
+    envelope_type:
+      type: string
+      description: Type de l'envelope
+      enum:
+        - DL
+        - C4
+      example: DL
+
+    error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+              <tr><td>ATTACHMENTS_EXCEED_MAX_SIZE</td><td>Les attachements ont dépassé la taille autorisée</td></tr>
+              <tr><td>ADDRESS_LINE_1_TOO_LONG</td><td>La ligne d'adresse n°1 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_2_TOO_LONG</td><td>La ligne d'adresse n°2 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_3_TOO_LONG</td><td>La ligne d'adresse n°3 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_4_TOO_LONG</td><td>La ligne d'adresse n°4 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_5_TOO_LONG</td><td>La ligne d'adresse n°5 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_TOO_LONG</td><td>La ligne d'adresse n°6 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_WRONG_FORMAT</td><td>Le champ address_line_6 doit avoir le format [CODE_POSTAL] [VILLE], avec CODE_POSTAL sur 5 chiffres, lorsque le code pays vaut "FR"</td></tr>
+              <tr><td>ALREADY_CHECK_SENDING</td><td>La vérification de l'envoi a déjà été réalisée</td></tr>
+              <tr><td>ATTRIBUTE_EXIST</td><td>L'attribut doit être unique et il existe déjà</td></tr>
+              <tr><td>ATTRIBUTE_MANDATORY</td><td>L'attribut est obligatoire. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_NOT_FOUND</td><td>L'attribut n'est pas trouvé. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_TOO_LONG</td><td>L'attribut est trop long. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_WRONG_PARAMETER</td><td>Un attribut est incorrect. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>CHECK_OBSOLETE_AFTER_SENDING_MODIFICATION</td><td>Après modification de l'envoi, le résultat de la vérification du check, lancée auparavant, est obsolète. Il faut relancer une nouvelle vérification</td></tr>
+              <tr><td>CORRUPTED_DOCUMENT</td><td>Le document est corrompu ou contient un virus</td></tr>
+              <tr><td>COUNTRY_CODE_TOO_LONG</td><td>Le code pays est limité à 2 caractères</td></tr>
+              <tr><td>CUSTOM_ID_EMPTY</td><td>Le custom id est vide</td></tr>
+              <tr><td>CUSTOM_ID_WRONG_FORMAT</td><td>Le custom id n'est pas au bon format</td></tr>
+              <tr><td>DOCUMENT_NOT_FOUND</td><td>Le document est introuvable</td></tr>
+              <tr><td>DOCUMENT_IN_DOCUMENTS_OVERRIDE</td><td>Impossible de supprimer le document puisque des bribes de document y font référence. Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_ID_NOT_ACCEPTED</td><td>Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_NOT_ACCEPTED</td><td>Première page ou dernière page invalides pour le document spécifié</td></tr>
+              <tr><td>DOC_TYPE_NOT_ACCEPTED</td><td>Le type de document n'est pas accepté (.pdf, .doc, .docx, .rtf, .txt, .xls, .xlsx autorisés)</td></tr>
+              <tr><td>DUPLICATE_PRIORITY</td><td>Plusieurs documents ont la même priorité</td></tr>
+              <tr><td>EMAIL_TEMPLATE_NOT_FOUND</td><td>The template ‘{0}’ is not found</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_1_OR_ADDRESS_LINE_2</td><td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_6</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ATTRIBUTE</td><td>L'attribut est vide. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>EMPTY_DOCUMENT</td><td>Le document est vide</td></tr>
+              <tr><td>EMPTY_FILE_ID</td><td>L'identifiant de fichier est vide</td></tr>
+              <tr><td>EMPTY_PRODUCTION_CENTER</td><td>Le centre de production est vide</td></tr>
+              <tr><td>EMPTY_METADATA</td><td>Les méta-données sont vides</td></tr>
+              <tr><td>EMPTY_NAME</td><td>Aucun nom d'envoi n'a été transmis</td></tr>
+              <tr><td>EMPTY_PRIORITY</td><td>Le champ priority est vide</td></tr>
+              <tr><td>EMPTY_SCHEDULED_DATE</td><td>La date d'engagement de remise en poste est manquante</td></tr>
+              <tr><td>FORBIDDEN_PRINT_SENDER_ADDRESS_WITH_SIMPLE_ENVELOPPE_WINDOWS_TYPE</td><td>L'impression de l'adresse de l'expéditeur nécessite le choix d'une enveloppe à double fenêtres</td></tr>
+              <tr><td>FORBIDDEN_TREAT_UNDELIVERED_MAIL_AND_PRINT_SENDER_ADDRESS</td><td>L'impression de l'adresse de l'expéditeur n'est pas compatible avec la gestion électronique des PND</td></tr>
+              <tr><td>INVALID_COUNTRY_CODE</td><td>Le code pays n'est pas autorisé</td></tr>
+              <tr><td>INVALID_DOCUMENTS_COUNT</td><td>Erreur lorsque l'on tente d'ajouter plus de 30 documents dans un envoi</td></tr>
+              <tr><td>INVALID_DOCUMENT_SIZE</td><td>La taille du document transmis dépasse les 20 Mo</td></tr>
+              <tr><td>INVALID_DOCUMENT_TYPE</td><td>Seuls les documents de type INVOICE peuvent apparaitre dans les bribes de documents d'un destinataire</td></tr>
+              <tr><td>INVALID_INVOICE_DATE</td><td>Date de facture ne peut pas être postérieure à la date du jour. Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRIORITY</td><td>Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRODUCTION_CENTER</td><td>Le centre de production est inconnu</td></tr>
+              <tr><td>INVALID_NOTIFICATION_EMAIL</td><td>L'email est invalide.</td></tr>
+              <tr><td>INVALID_NUMBER_COUNT</td><td>Le numéro de facture associé à l'expéditeur a déjà été utilisé dans le cadre d'un destinataire Chorus</td></tr>
+              <tr><td>INVALID_RECIPIENTS_COUNT</td><td>Le nombre de destinataires est atteint</td></tr>
+              <tr><td>INVALID_SIRET</td><td>Siret invalide</td></tr>
+              <tr><td>INVALID_TOTAL_SENDING_SIZE</td><td>La somme des tailles de l'ensemble des documents dépasse 20 Mo</td></tr>
+              <tr><td>JSON_FORMAT_ERROR</td><td>Un problème dans le format JSON des données transmises</td></tr>
+              <tr><td>MAX_ATTRIBUTE_VALUE_EXEEDED</td><td>L'attribut ne peut pas dépasser une valeur maximale</td></tr>
+              <tr><td>METADATA_WRONG_FORMAT</td><td>Le paramètre metadata n'est pas correct</td></tr>
+              <tr><td>MISSING_FILE</td><td>Fichier à charger introuvable</td></tr>
+              <tr><td>NAME_TOO_LONG</td><td>Le nom de l'envoi est trop long (256 caractères max)</td></tr>
+              <tr><td>NO_INVOICE_ON_SENDING</td><td>Pas de facture dans l'envoi</td></tr>
+              <tr><td>NO_PARAMETER</td><td>Au moins un paramètre est requis</td></tr>
+              <tr><td>NO_RECIPIENT_ON_SENDING</td><td>Pas de destinataires dans l'envoi</td></tr>
+              <tr><td>OPERATION_IN_PROGRESS</td><td>L'opération est en cours. le résultat ne peut pas être fourni immédiatement</td></tr>
+              <tr><td>PAGES_NOT_MATCH</td><td>Incohérence entre la première page et la dernière page</td></tr>
+              <tr><td>PARAM_FILTER_NOT_ALLOWED</td><td>La valeur de l'attribut n'est pas acceptée. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>PARAM_NOT_ACCEPTED</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>POST_CHECK_MANDATORY_BEFORE_GET</td><td>Une demande de résultat d'une vérification d'un envoi a été reçue alors qu'aucune vérification n'a été lancée</td></tr>
+              <tr><td>RECIPIENT_NOT_FOUND</td><td>Ressource RECIPIENT introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>SENDING_NOT_FOUND</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>STATUS_NOT_DRAFT</td><td>Erreur quand on essaie d'ajouter un document ou un destinataire dans un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de soumettre un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de modifier une option d'un envoi qui n'est pas en état draft</td></tr>
+              <tr><td>SHEET_NUMBER_EXCEEDED</td><td>Nombre de feuilles maximales dépassé pour le type d'enveloppe</td></tr>
+              <tr><td>SIRET_ERROR</td><td>La plateforme Chorus Pro n'accepte pas le numéro de Siret</td></tr>
+              <tr><td>SIRET_RECIPIENT_COMMITMENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret, du code service exécutant et du numéro d'engagement juridique</td></tr>
+              <tr><td>SIRET_RECIPIENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret et du code service exécutant</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_DOCUMENT</td><td>Plusieurs documents ont été envoyés en multipart alors que le service limite à un document.</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_METADATA</td><td>Le paramètre metadata a été transmis plusieurs fois</td></tr>
+              <tr><td>UNEXPECTED_ERROR</td><td>Une erreur inattendue est intervenue </td></tr>
+              <tr><td>WRONG_FORMAT_ATTRIBUTE</td><td>Le format de l'attribut est incorrect</td></tr>
+            </table>
+        message:
+          type: string
+
+    errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/error_response'
+
+    import_recipients:
+      type: object
+      description: Les destinataires d'un envoi
+      properties:
+        import_recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/recipient_creation'
+      required:
+        - import_recipients
+
+    mail_options:
+      description: Options Courrier pour l'envoi
+      type: object
+      required:
+        - color_printing
+        - duplex_printing
+        - optional_address_sheet
+        - archiving_duration
+      properties:
+        archiving_duration:
+          type: integer
+          description: Durée d'archivage optionnelle pour envoi papier (en années)
+          enum:
+            - 0
+            - 11
+          default: 0
+          example: 0
+        color_printing:
+          type: boolean
+          description: Impression couleur
+          default: true
+          example: true
+        duplex_printing:
+          type: boolean
+          description: Impression recto verso
+          default: true
+          example: true
+        envelope_windows_type:
+          type: string
+          description: enveloppe simple ou double fenêtre (si format DL)
+          enum:
+            - SIMPLE
+            - DOUBLE
+          example: SIMPLE
+        notification_treat_undelivered_mail:
+          type: array
+          description: Liste des emails de notification des PND
+          items:
+            type: string
+          example: [ "email@domain.com","email_bis@domain.com" ]
+        optional_address_sheet:
+          type: boolean
+          description: Feuille porte adresse optionnelle
+          default: false
+          example: false
+        postage_type:
+          $ref: '#/components/schemas/mail_postage_type'
+        print_sender_address:
+          type: boolean
+          description: Impression de l'adresse expéditeur
+          default: false
+          example: false
+        treat_undelivered_mail:
+          type: boolean
+          description: Gestion électronique des PND
+          default: false
+          example: false
+
+    mail_postage_class:
+      type: string
+      description: >-
+        Catégorie de l'affranchissement
+        
+        <table border="1">
+          <tr bgcolor="lightgrey">
+            <th>Code</th>
+            <th>Libellé</th>
+          </tr>
+          <tr>
+            <td>IMPORTANT</td>
+            <td>Important - lettre performance</td>
+          </tr>
+          <tr>
+            <td>IMPORTANT_INDUSTRIEL</td>
+            <td>Important - courrier indus G2</td>
+          </tr>
+          <tr>
+            <td>PRIORITY</td>
+            <td>Courant - lettre verte ou lettre internationale</td>
+          </tr>
+          <tr>
+            <td>PRIORITY_INDUSTRIAL</td>
+            <td>Courant - courrier indus G3</td>
+          </tr>
+          <tr>
+            <td>ECONOMY</td>
+            <td>Economique - écopli</td>
+          </tr>
+          <tr>
+            <td>ECONOMY_INDUSTRIAL</td>
+            <td>Economique - courrier indus G4</td>
+          </tr>
+        </table>
+      enum:
+        - IMPORTANT
+        - IMPORTANT_INDUSTRIEL
+        - PRIORITY
+        - PRIORITY_INDUSTRIAL
+        - ECONOMY
+        - ECONOMY_INDUSTRIAL
+      example: PRIORITY
+
+    mail_postage_type:
+      type: string
+      description: >-
+        Type d'affranchissement demandé
+
+        <table border="1">
+          <tr bgcolor="lightgrey">
+            <th>Code</th>
+            <th>Libellé</th>
+            <th>Délai</th>
+          </tr>
+          <tr>
+            <td>URGENT</td>
+            <td>Important</td>
+            <td>J+2</td>
+          </tr>
+          <tr>
+            <td>FAST</td>
+            <td>Courant</td>
+            <td>J+3</td>
+          </tr>
+          <tr>
+            <td>ECONOMIC</td>
+            <td>Economique</td>
+            <td>J+4</td>
+          </tr>
+        </table>
+      enum:
+        - URGENT
+        - FAST
+        - ECONOMIC
+
+    paging_response:
+      description: Pagination des résultats
+      type: object
+      properties:
+        next:
+          description: Page suivante
+          type: string
+        prev:
+          description: Page précédente
+          type: string
+        total_results:
+          description: Nombre de résultats
+          type: number
+
+    priority:
+      type: object
+      required:
+        - priority
+      properties:
+        priority:
+          description: Ordre d'impression du document
+          type: integer
+          example: 1
+
+    recipient_creation:
+      description: Ajout d'un destinataire / facture
+      type: object
+      properties:
+        identifier:
+          type: string
+          maxLength: 38
+          description: Identifiant unique du destinataire pour le rapprochement avec le carnet d'adresses
+          example: "recip1234"
+        sending_mode:
+          $ref: '#/components/schemas/sending_mode'
+        custom_id:
+          type: string
+          maxLength: 36
+          description: Identifiant du destinataire fourni par le client
+          example: "custom"
+        custom_data:
+          type: string
+          maxLength: 255
+          description: Information libre fournie par le client
+          example: "order_1234"
+        invoice_date:
+          type: string
+          format: date
+          description: Date de la facture
+          example: '2018-03-14'
+        invoice_due_date:
+          type: string
+          format: date
+          description: Date d'échéance de la facture
+          example: '2018-03-14'
+        invoice_number:
+          type: string
+          description: Numéro de facture
+          maxLength: 20
+          example: "FAC_1234"
+        invoice_amount_without_tax:
+          type: number
+          format: float
+          description: Montant hors taxe de la facture
+          example: 100.50
+        invoice_net_payable_amount:
+          type: number
+          format: float
+          description: Montant net à payer (montant TTC - remises)
+          example: 120.50
+        invoice_tax_amount:
+          type: number
+          format: float
+          description: Montant de la TVA de la facture
+          example: 20.0
+        invoice_total_amount:
+          type: number
+          format: float
+          description: Montant toutes taxes comprises
+          example: 120.50
+        invoice_currency:
+          type: string
+          description: Devise de la facture
+          example: EUR
+          enum:
+            - EUR
+            - USD
+            - GBP
+            - CHF
+        invoice_type:
+          type: string
+          description: Type de la facture
+          example: "INVOICE"
+          enum:
+            - INVOICE
+            - CREDIT
+        department_code:
+          type: string
+          description: Code Service Exécutant
+          maxLength: 110
+          example: PRFPLTF974
+        legal_commitment_number:
+          type: string
+          description: Numéro d’engagement juridique
+          maxLength: 50
+          example: 18OAG0027886
+        original_invoice_number:
+          type: string
+          description: Numéro de la facture de référence (cas d'un avoir)
+          maxLength: 255
+          example: Av-123456
+        company_name:
+          type: string
+          description: Raison sociale du destinataire
+          maxLength: 255
+          example: Ministère de l'interieur
+        siret:
+          type: string
+          description: SIRET du destinataire
+          maxLength: 14
+          example: 42433569300083
+        market_type:
+          type: string
+          description: Type de marché
+          example: "CO_CONTRACTING"
+          enum:
+            - CO_CONTRACTING
+            - SUBCONTRACTING
+        approver_siret:
+          type: string
+          description: SIRET du validateur
+          maxLength: 14
+          example: 42433569300083
+        approver_country_code:
+          type: string
+          description: Code Pays du valideur
+          maxLength: 2
+          example: FR
+        approver_company_name:
+          type: string
+          description: Raison sociale du validateur
+          maxLength: 255
+          example: France facture
+        factor_country_code:
+          #description: Code pays de l'affactureur
+          $ref: '#/components/schemas/country_code'
+        factor_company_name:
+          type: string
+          description: Raison sociale de l'affactureur
+          maxLength: 255
+          example: EURL BASILE
+        factor_siret:
+          type: string
+          description: Siret de l'affactureur
+          maxLength: 14
+          example: 42433569300083
+        sender_iban:
+          type: string
+          description: Iban de l'émetteur de la facture
+          maxLength: 34
+          example: FR7612548029989876543210917
+        sender_bic:
+          type: string
+          description: BIC de l'émetteur de la facture
+          maxLength: 12
+          example: BOUSFRPPXXX
+        subject:
+          type: string
+          maxLength: 255
+          description: Objet
+          example: "Votre facture EZRE123123 est disponible"
+        email:
+          type: string
+          description: adresse email du destinataire
+          maxLength: 255
+          example: "recip@domain.com"
+        address_line_1:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°1 (Société)
+          example: "La Poste"
+        address_line_2:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°2 (Civilité, Prénom, Nom)
+          example: "Me Eva DUPONT"
+        address_line_3:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°3 (Résidence, Bâtiement ...)
+          example: "Résidence des Peupliers"
+        address_line_4:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°4 (N° et libellé de la voie)
+          example: "33 avenue de Paris"
+        address_line_5:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°5 (Lieu dit, BP...)
+          example: "BP 356"
+        address_line_6:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°6 (Code postal et ville)
+          example: "75000 Paris"
+        country_code:
+          $ref: '#/components/schemas/country_code'
+        email_template_id:
+          type: string
+          format: uuid
+          description : Identifiant du template d'e-mail
+          example: 59e081d8-20ee-4336-9a1b-fd37ad9a76c1
+        documents_override:
+          type: array
+          description: |-
+            Liste de bribes de documents. Seuls les documents de type *INVOICE* peuvent se retrouver dans les bribes de documents. Si ce champ n'est pas renseigné, 
+            le destinataire recevra tous les documents associé à l'envoi. Le destinataire recevera de toute façon, avec ou sans bribes de documents, toutes les pièces jointes de l'envoi.
+            Si ce champ est renseigné, le destinataire recevra la liste de 
+            bribes de documents indiquées (composées en un seul document dans l'ordre des priorités des documents).
+          items:
+            $ref: '#/components/schemas/documents_override_item'
+
+
+    recipient_error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+              <tr><td>ATTACHMENTS_EXCEED_MAX_SIZE</td><td>Les attachements ont dépassé la taille autorisée</td></tr>
+              <tr><td>ADDRESS_LINE_1_TOO_LONG</td><td>La ligne d'adresse n°1 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_2_TOO_LONG</td><td>La ligne d'adresse n°2 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_3_TOO_LONG</td><td>La ligne d'adresse n°3 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_4_TOO_LONG</td><td>La ligne d'adresse n°4 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_5_TOO_LONG</td><td>La ligne d'adresse n°5 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_TOO_LONG</td><td>La ligne d'adresse n°6 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_WRONG_FORMAT</td><td>Le champ address_line_6 doit avoir le format [CODE_POSTAL] [VILLE], avec CODE_POSTAL sur 5 chiffres, lorsque le code pays vaut "FR"</td></tr>
+              <tr><td>ALREADY_CHECK_SENDING</td><td>La vérification de l'envoi a déjà été réalisée</td></tr>
+              <tr><td>ATTRIBUTE_EXIST</td><td>L'attribut doit être unique et il existe déjà</td></tr>
+              <tr><td>ATTRIBUTE_MANDATORY</td><td>L'attribut est obligatoire. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_NOT_FOUND</td><td>L'attribut n'est pas trouvé. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_TOO_LONG</td><td>L'attribut est trop long. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_WRONG_PARAMETER</td><td>Un attribut est incorrect. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>CHECK_OBSOLETE_AFTER_SENDING_MODIFICATION</td><td>Après modification de l'envoi, le résultat de la vérification du check, lancée auparavant, est obsolète. Il faut relancer une nouvelle vérification</td></tr>
+              <tr><td>CORRUPTED_DOCUMENT</td><td>Le document est corrompu ou contient un virus</td></tr>
+              <tr><td>COUNTRY_CODE_TOO_LONG</td><td>Le code pays est limité à 2 caractères</td></tr>
+              <tr><td>CUSTOM_ID_EMPTY</td><td>Le custom id est vide</td></tr>
+              <tr><td>CUSTOM_ID_WRONG_FORMAT</td><td>Le custom id n'est pas au bon format</td></tr>
+              <tr><td>DOCUMENT_NOT_FOUND</td><td>Le document est introuvable</td></tr>
+              <tr><td>DOCUMENT_IN_DOCUMENTS_OVERRIDE</td><td>Impossible de supprimer le document puisque des bribes de document y font référence. Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_ID_NOT_ACCEPTED</td><td>Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_NOT_ACCEPTED</td><td>Première page ou dernière page invalides pour le document spécifié</td></tr>
+              <tr><td>DOC_TYPE_NOT_ACCEPTED</td><td>Le type de document n'est pas accepté (.pdf, .doc, .docx, .rtf, .txt, .xls, .xlsx autorisés)</td></tr>
+              <tr><td>DUPLICATE_PRIORITY</td><td>Plusieurs documents ont la même priorité</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_1_OR_ADDRESS_LINE_2</td><td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_6</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ATTRIBUTE</td><td>L'attribut est vide. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>EMPTY_DOCUMENT</td><td>Le document est vide</td></tr>
+              <tr><td>EMPTY_FILE_ID</td><td>L'identifiant de fichier est vide</td></tr>
+              <tr><td>EMPTY_PRODUCTION_CENTER</td><td>Le centre de production est vide</td></tr>
+              <tr><td>EMPTY_METADATA</td><td>Les méta-données sont vides</td></tr>
+              <tr><td>EMPTY_NAME</td><td>Aucun nom d'envoi n'a été transmis</td></tr>
+              <tr><td>EMPTY_PRIORITY</td><td>Le champ priority est vide</td></tr>
+              <tr><td>EMPTY_SCHEDULED_DATE</td><td>La date d'engagement de remise en poste est manquante</td></tr>
+              <tr><td>FORBIDDEN_PRINT_SENDER_ADDRESS_WITH_SIMPLE_ENVELOPPE_WINDOWS_TYPE</td><td>L'impression de l'adresse de l'expéditeur nécessite le choix d'une enveloppe à double fenêtres</td></tr>
+              <tr><td>FORBIDDEN_SENDING_MODE_WITH_TEMPLATE_USAGES</td><td>The sending mode 'EMAIL' is not compatible with the template ‘{0}’ usages</td>
+              <tr><td>FORBIDDEN_TREAT_UNDELIVERED_MAIL_AND_PRINT_SENDER_ADDRESS</td><td>L'impression de l'adresse de l'expéditeur n'est pas compatible avec la gestion électronique des PND</td></tr>
+              <tr><td>INVALID_COUNTRY_CODE</td><td>Le code pays n'est pas autorisé</td></tr>
+              <tr><td>INVALID_DOCUMENTS_COUNT</td><td>Erreur lorsque l'on tente d'ajouter plus de 30 documents dans un envoi</td></tr>
+              <tr><td>INVALID_DOCUMENT_SIZE</td><td>La taille du document transmis dépasse les 20 Mo</td></tr>
+              <tr><td>INVALID_DOCUMENT_TYPE</td><td>Seuls les documents de type INVOICE peuvent apparaitre dans les bribes de documents d'un destinataire</td></tr>
+              <tr><td>INVALID_EMAIL_TEMPLATE_ID</td><td>The value of parameter `email_template_id` is invalid</td></tr>
+              <tr><td>INVALID_INVOICE_DATE</td><td>Date de facture ne peut pas être postérieure à la date du jour. Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRIORITY</td><td>Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRODUCTION_CENTER</td><td>Le centre de production est inconnu</td></tr>
+              <tr><td>INVALID_NOTIFICATION_EMAIL</td><td>L'email est invalide.</td></tr>
+              <tr><td>INVALID_NUMBER_COUNT</td><td>Le numéro de facture associé à l'expéditeur a déjà été utilisé dans le cadre d'un destinataire Chorus</td></tr>
+              <tr><td>INVALID_RECIPIENTS_COUNT</td><td>Le nombre de destinataires est atteint</td></tr>
+              <tr><td>INVALID_SIRET</td><td>Siret invalide</td></tr>
+              <tr><td>INVALID_TOTAL_SENDING_SIZE</td><td>La somme des tailles de l'ensemble des documents dépasse 20 Mo</td></tr>
+              <tr><td>JSON_FORMAT_ERROR</td><td>Un problème dans le format JSON des données transmises</td></tr>
+              <tr><td>MAX_ATTRIBUTE_VALUE_EXEEDED</td><td>L'attribut ne peut pas dépasser une valeur maximale</td></tr>
+              <tr><td>METADATA_WRONG_FORMAT</td><td>Le paramètre metadata n'est pas correct</td></tr>
+              <tr><td>MISSING_FILE</td><td>Fichier à charger introuvable</td></tr>
+              <tr><td>NAME_TOO_LONG</td><td>Le nom de l'envoi est trop long (256 caractères max)</td></tr>
+              <tr><td>NO_INVOICE_ON_SENDING</td><td>Pas de facture dans l'envoi</td></tr>
+              <tr><td>NO_PARAMETER</td><td>Au moins un paramètre est requis</td></tr>
+              <tr><td>NO_RECIPIENT_ON_SENDING</td><td>Pas de destinataires dans l'envoi</td></tr>
+              <tr><td>OPERATION_IN_PROGRESS</td><td>L'opération est en cours. le résultat ne peut pas être fourni immédiatement</td></tr>
+              <tr><td>PAGES_NOT_MATCH</td><td>Incohérence entre la première page et la dernière page</td></tr>
+              <tr><td>PARAM_FILTER_NOT_ALLOWED</td><td>La valeur de l'attribut n'est pas acceptée. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>PARAM_NOT_ACCEPTED</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>POST_CHECK_MANDATORY_BEFORE_GET</td><td>Une demande de résultat d'une vérification d'un envoi a été reçue alors qu'aucune vérification n'a été lancée</td></tr>
+              <tr><td>RECIPIENT_NOT_FOUND</td><td>Ressource RECIPIENT introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>SENDING_NOT_FOUND</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>STATUS_NOT_DRAFT</td><td>Erreur quand on essaie d'ajouter un document ou un destinataire dans un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de soumettre un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de modifier une option d'un envoi qui n'est pas en état draft</td></tr>
+              <tr><td>SHEET_NUMBER_EXCEEDED</td><td>Nombre de feuilles maximales dépassé pour le type d'enveloppe</td></tr>
+              <tr><td>SIRET_ERROR</td><td>La plateforme Chorus Pro n'accepte pas le numéro de Siret</td></tr>
+              <tr><td>SIRET_RECIPIENT_COMMITMENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret, du code service exécutant et du numéro d'engagement juridique</td></tr>
+              <tr><td>SIRET_RECIPIENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret et du code service exécutant</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_DOCUMENT</td><td>Plusieurs documents ont été envoyés en multipart alors que le service limite à un document.</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_METADATA</td><td>Le paramètre metadata a été transmis plusieurs fois</td></tr>
+              <tr><td>UNEXPECTED_ERROR</td><td>Une erreur inattendue est intervenue </td></tr>
+              <tr><td>WRONG_FORMAT_ATTRIBUTE</td><td>Le format de l'attribut est incorrect</td></tr>
+            </table>
+        message:
+          type: string
+
+    recipient_errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/recipient_error_response'
+
+    recipient_response:
+      type: object
+      description: "Les destinataires importés pour l'envoi"
+      properties:
+        id:
+          type: string
+          description: Identifiant du destinataire
+          example: "d905a65e-aa46-4f37-8480-260c4600c810"
+        identifier:
+          type: string
+          maxLength: 38
+          description: Identifiant unique du destinataire pour le rapprochement avec le carnet d'adresses
+          example: "recip1234"
+        sending_mode:
+          $ref: '#/components/schemas/sending_mode'
+        recipient_tracking_reference:
+          type: string
+          description: référence (rfr) qui permet au client d'identifier le destinataire auprès du support
+          example: "4020110013K00001"
+        custom_id:
+          type: string
+          maxLength: 36
+          description: Identifiant du destinataire fourni par le client
+          example: "custom"
+        custom_data:
+          type: string
+          maxLength: 255
+          description: Information libre fournie par le client
+          example: "order_1234"
+        invoice_date:
+          type: string
+          format: date
+          description: Date de la facture
+          example: '2018-03-14'
+        invoice_due_date:
+          type: string
+          format: date
+          description: Date d'échéance de la facture
+          example: '2018-03-14'
+        invoice_number:
+          type: string
+          description: Numéro de facture
+          maxLength: 20
+          example: "FAC_1234"
+        invoice_amount_without_tax:
+          type: number
+          format: float
+          description: Montant hors taxe de la facture
+          example: 100.50
+        invoice_net_payable_amount:
+          type: number
+          format: float
+          description: Montant net à payer (montant TTC - remises)
+          example: 120.50
+        invoice_tax_amount:
+          type: number
+          format: float
+          description: Montant de la TVA de la facture
+          example: 20.0
+        invoice_total_amount:
+          type: number
+          format: float
+          description: Montant toutes taxes comprises
+          example: 120.50
+        invoice_type:
+          type: string
+          description: Type de la facture
+          example: "INVOICE"
+          enum:
+            - INVOICE
+            - CREDIT
+        department_code:
+          type: string
+          description: Code Service Exécutant
+          maxLength: 110
+          example: PRFPLTF974
+        legal_commitment_number:
+          type: string
+          description: Numéro d’engagement juridique
+          maxLength: 50
+          example: 18OAG0027886
+        original_invoice_number:
+          type: string
+          description: Numéro de la facture de référence (cas d'un avoir)
+          maxLength: 255
+          example: Av-123456
+        company_name:
+          type: string
+          description: Raison sociale du destinataire
+          maxLength: 255
+          example: Ministère de l'interieur
+        siret:
+          type: string
+          description: SIRET du destinataire
+          maxLength: 14
+          example: 42433569300083
+        market_type:
+          type: string
+          description: Type de marché
+          example: "CO_CONTRACTING"
+          enum:
+            - CO_CONTRACTING
+            - SUBCONTRACTING
+        approver_siret:
+          type: string
+          description: SIRET du validateur
+          maxLength: 14
+          example: 42433569300083
+        approver_country_code:
+          type: string
+          description: Code Pays du valideur
+          maxLength: 2
+          example: FR
+        approver_company_name:
+          type: string
+          description: Raison sociale du validateur
+          maxLength: 255
+          example: France facture
+        factor_country_code:
+          #description: Code pays de l'affactureur
+          $ref: '#/components/schemas/country_code'
+        factor_company_name:
+          type: string
+          description: Raison sociale de l'affactureur
+          maxLength: 255
+          example: EURL BASILE
+        factor_siret:
+          type: string
+          description: Siret de l'affactureur
+          maxLength: 14
+          example: 42433569300083
+        sender_iban:
+          type: string
+          description: Iban de l'émetteur de la facture
+          maxLength: 34
+          example: FR7612548029989876543210917
+        sender_bic:
+          type: string
+          description: BIC de l'émetteur de la facture
+          maxLength: 12
+          example: BOUSFRPPXXX
+        subject:
+          type: string
+          maxLength: 255
+          description: Objet
+          example: "Votre facture EZRE123123 est disponible"
+        email:
+          type: string
+          description: adresse email du destinataire
+          maxLength: 255
+          example: "recip@domain.com"
+        address_line_1:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°1 (Société)
+          example: "La Poste"
+        address_line_2:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°2 (Civilité, Prénom, Nom)
+          example: "Me Eva DUPONT"
+        address_line_3:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°3 (Résidence, Bâtiement ...)
+          example: "Résidence des Peupliers"
+        address_line_4:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°4 (N° et libellé de la voie)
+          example: "33 avenue de Paris"
+        address_line_5:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°5 (Lieu dit, BP...)
+          example: "BP 356"
+        address_line_6:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°6 (Code postal et ville)
+          example: "75000 Paris"
+        country_code:
+          $ref: '#/components/schemas/country_code'
+        documents_override:
+          type: array
+          description: |-
+            Liste de bribes de documents. Si ce champ n'est pas renseigné, 
+            le destinataire recevra tous les documents associé à l'envoi. 
+            Si ce champ est renseigné, le destinataire recevra la liste de 
+            bribes de documents indiquées (dans l'ordre des éléments du tableau).
+          items:
+            $ref: '#/components/schemas/documents_override_item'
+        postage_type:
+          $ref: '#/components/schemas/mail_postage_type'
+        postage_class:
+          $ref: '#/components/schemas/mail_postage_class'
+        status:
+          $ref: '#/components/schemas/recipient_status'
+        status_detail:
+          type: string
+          description: Détail d'un statut (cause du rejet)
+        last_delivery_status:
+          type: string
+          description: Dernier statut de distribution
+        last_delivery_status_date:
+          type: string
+          format: datetime
+          description: Date du dernier statut de distribution
+          example: "2018-03-14T07:21:40.757Z"
+        postage_price:
+          type: number
+          format: float
+          description: Coût de l'affranchissement en euros
+        undelivered_mail_date:
+          type: string
+          format: date-time
+          description: Date du PND
+          example: '2018-03-14T07:21:40.757Z'
+        archive_date:
+          type: string
+          format: date-time
+          description: Date d'archivage de la facture
+          example: '2018-03-14T07:21:40.757Z'
+        archive_url:
+          type: string
+          description: URL de l'archive de la facture
+          example: "/sendings/110e8400-e29b-11d4-a716-446655440000/recipients/d905a65e-aa46-4f37-8480-260c4600c810/download_archive"
+        pages_count:
+          type: integer
+          description: Nombre de pages. Ce nombre de pages inclut l'éventuelle page porte-adresse (payante ou obligatoire) mais n'inclut pas les pages blanches ajoutées au verso par Maileva.
+          example: 3
+        billed_pages_count:
+          type: integer
+          description: Nombre de pages facturées (disponible à partir du statut ACCEPTED). Ce nombre de pages inclut la page porte-adresse payante (DL) mais n'inclut pas la page porte-adresse obligatoire (C4) ni les pages blanches ajoutées au verso par Maileva.
+          example: 3
+        sheets_count:
+          type: integer
+          description: Nombre de feuilles (disponible à partir du statut ACCEPTED). Ce nombre de feuilles inclut la page porte-adresse éventuelle (payante ou obligatoire).
+          example: 2
+
+        creation_date:
+          type: string
+          format: datetime
+          description: Date de création
+          example: '2018-03-14T07:21:40.757Z'
+        modification_date:
+          type: string
+          format: datetime
+          description: Date de modification
+          example: '2018-03-14T07:21:40.757Z'
+
+    recipient_status:
+      type: string
+      description: >-
+        Statut du destinataire.
+
+        <table>
+          <tr>
+            <td>DRAFT</td>
+            <td>le destinataire a été ajouté à l'envoi qui est au statut draft</td>
+          </tr>
+          <tr>
+            <td>PENDING</td>
+            <td>le destinataire a été ni traité, ni rejeté</td>
+          </tr>
+          <tr>
+            <td>PROCESSED</td>
+            <td>le destinataire a été : Par Courrier, mis sous pli; Par Chorus, envoyé à Chorus; Par E-mail envoyé</td>
+          </tr>
+          <tr>
+            <td>REJECTED</td>
+            <td>le destinataire n'est pas valide</td>
+          </tr>
+        </table>
+      enum:
+        - DRAFT
+        - PENDING
+        - PROCESSED
+        - REJECTED
+      example: PENDING
+
+    recipients_counts:
+      type: object
+      properties:
+        draft:
+          type: integer
+          description: Nombre de destinataires au statut DRAFT
+          example: 0
+        pending:
+          type: integer
+          description: Nombre de destinataires au statut PENDING
+          example: 1
+        processed:
+          type: integer
+          description: Nombre de destinataires au statut PROCESSED
+          example: 0
+        rejected:
+          type: integer
+          description: Nombre de destinataires au statut REJECTED
+          example: 0
+        total:
+          type: integer
+          description: Nombre de destinataires total
+          example: 1
+
+    recipients_response:
+      type: object
+      required:
+        - recipients
+        - paging
+      description: Les destinataires d'un envoi
+      properties:
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/recipient_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+
+    sending_creation:
+      type: object
+      description: un envoi
+      properties:
+        name:
+          type: string
+          description: Nom de l'envoi
+          maxLength: 256
+          minLength: 1
+          example: "Envoi du 14 février"
+        custom_id:
+          type: string
+          maxLength: 36
+          description: Identifiant de l'envoi défini par le client
+          example: "order_1234"
+        custom_data:
+          type: string
+          maxLength: 255
+          description: Information libre fournie par le client
+          example: "order_1234"
+        notification_email:
+          type: string
+          description: Email de notification
+          example: do_not_reply@maileva.com
+        sender_address_line_1:
+          description: Ligne d'adresse n°1 (Société) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "Société Durand"
+        sender_address_line_2:
+          description: Ligne d'adresse n°2 (Civilité, Prénom, Nom) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "M. Pierre DUPONT"
+        sender_address_line_3:
+          description: Ligne d'adresse n°3 (Résidence, Bâtiement ...) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "Batiment B"
+        sender_address_line_4:
+          description: Ligne d'adresse n°4 (N° et libellé de la voie) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "10 avenue Charles de Gaulle"
+        sender_address_line_5:
+          description: Ligne d'adresse n°5 (Lieu dit, BP...) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: ""
+        sender_address_line_6:
+          description: Ligne d'adresse n°6 (Code postal et ville) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "94673 Charenton-Le-Pont"
+        sender_country_code:
+          $ref: '#/components/schemas/country_code'
+        sender_tax_number:
+          type: string
+          maxLength: 13
+          description: Numéro de TVA intra-communautaire de l’émetteur
+          example: "FR43424335693"
+        sender_siret:
+          type: string
+          maxLength: 14
+          description: Siret de l’émetteur
+          example: "42433569300083"
+        sender_company_name:
+          type: string
+          maxLength: 255
+          description: Raison sociale de l’émetteur
+          example: "Société DURAND"
+        email_options:
+          $ref: '#/components/schemas/email_options'
+        mail_options:
+          $ref: '#/components/schemas/mail_options'
+        portal_options:
+          $ref: '#/components/schemas/portal_options'
+
+    sending_mode:
+      type: string
+      description: >-
+        Mode d'envoi de la facture <br/>
+        <table border="1">
+          <tr bgcolor="lightgrey">
+            <th>Code</th>
+            <th>Description</th>
+          </tr>
+          <tr><td>MAIL</td><td>Par Courrier (Editique)</td></tr>
+          <tr><td>EMAIL</td><td>Par E-mail</td></tr>
+          <tr><td>CHORUS</td><td>Par Chorus Pro</td></tr>
+          <tr><td>PORTAL</td><td>Mise à disposition sur le portail de publication de factures</td></tr>
+        </table>
+      enum:
+        - MAIL
+        - EMAIL
+        - CHORUS
+        - PORTAL
+
+    sending_error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+              <tr><td>ATTACHMENTS_EXCEED_MAX_SIZE</td><td>Les attachements ont dépassé la taille autorisée</td></tr>
+              <tr><td>ADDRESS_LINE_1_TOO_LONG</td><td>La ligne d'adresse n°1 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_2_TOO_LONG</td><td>La ligne d'adresse n°2 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_3_TOO_LONG</td><td>La ligne d'adresse n°3 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_4_TOO_LONG</td><td>La ligne d'adresse n°4 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_5_TOO_LONG</td><td>La ligne d'adresse n°5 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_TOO_LONG</td><td>La ligne d'adresse n°6 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_WRONG_FORMAT</td><td>Le champ address_line_6 doit avoir le format [CODE_POSTAL] [VILLE], avec CODE_POSTAL sur 5 chiffres, lorsque le code pays vaut "FR"</td></tr>
+              <tr><td>ALREADY_CHECK_SENDING</td><td>La vérification de l'envoi a déjà été réalisée</td></tr>
+              <tr><td>ATTRIBUTE_EXIST</td><td>L'attribut doit être unique et il existe déjà</td></tr>
+              <tr><td>ATTRIBUTE_MANDATORY</td><td>L'attribut est obligatoire. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_NOT_FOUND</td><td>L'attribut n'est pas trouvé. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_TOO_LONG</td><td>L'attribut est trop long. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_WRONG_PARAMETER</td><td>Un attribut est incorrect. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>CHECK_OBSOLETE_AFTER_SENDING_MODIFICATION</td><td>Après modification de l'envoi, le résultat de la vérification du check, lancée auparavant, est obsolète. Il faut relancer une nouvelle vérification</td></tr>
+              <tr><td>CORRUPTED_DOCUMENT</td><td>Le document est corrompu ou contient un virus</td></tr>
+              <tr><td>COUNTRY_CODE_TOO_LONG</td><td>Le code pays est limité à 2 caractères</td></tr>
+              <tr><td>CUSTOM_ID_EMPTY</td><td>Le custom id est vide</td></tr>
+              <tr><td>CUSTOM_ID_WRONG_FORMAT</td><td>Le custom id n'est pas au bon format</td></tr>
+              <tr><td>DOCUMENT_NOT_FOUND</td><td>Le document est introuvable</td></tr>
+              <tr><td>DOCUMENT_IN_DOCUMENTS_OVERRIDE</td><td>Impossible de supprimer le document puisque des bribes de document y font référence. Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_ID_NOT_ACCEPTED</td><td>Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_NOT_ACCEPTED</td><td>Première page ou dernière page invalides pour le document spécifié</td></tr>
+              <tr><td>DOC_TYPE_NOT_ACCEPTED</td><td>Le type de document n'est pas accepté (.pdf, .doc, .docx, .rtf, .txt, .xls, .xlsx autorisés)</td></tr>
+              <tr><td>DUPLICATE_PRIORITY</td><td>Plusieurs documents ont la même priorité</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_1_OR_ADDRESS_LINE_2</td><td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_6</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ATTRIBUTE</td><td>L'attribut est vide. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>EMPTY_DOCUMENT</td><td>Le document est vide</td></tr>
+              <tr><td>EMPTY_FILE_ID</td><td>L'identifiant de fichier est vide</td></tr>
+              <tr><td>EMPTY_PRODUCTION_CENTER</td><td>Le centre de production est vide</td></tr>
+              <tr><td>EMPTY_METADATA</td><td>Les méta-données sont vides</td></tr>
+              <tr><td>EMPTY_NAME</td><td>Aucun nom d'envoi n'a été transmis</td></tr>
+              <tr><td>EMPTY_PRIORITY</td><td>Le champ priority est vide</td></tr>
+              <tr><td>EMPTY_SCHEDULED_DATE</td><td>La date d'engagement de remise en poste est manquante</td></tr>
+              <tr><td>FORBIDDEN_PRINT_SENDER_ADDRESS_WITH_SIMPLE_ENVELOPPE_WINDOWS_TYPE</td><td>L'impression de l'adresse de l'expéditeur nécessite le choix d'une enveloppe à double fenêtres</td></tr>
+              <tr><td>FORBIDDEN_SENDING_MODE_WITH_TEMPLATE_USAGES</td><td>The sending mode ‘{0}’ is not compatible with the template ‘{1}’ usages</td></tr>
+              <tr><td>FORBIDDEN_TREAT_UNDELIVERED_MAIL_AND_PRINT_SENDER_ADDRESS</td><td>L'impression de l'adresse de l'expéditeur n'est pas compatible avec la gestion électronique des PND</td></tr>
+              <tr><td>INVALID_COUNTRY_CODE</td><td>Le code pays n'est pas autorisé</td></tr>
+              <tr><td>INVALID_DOCUMENTS_COUNT</td><td>Erreur lorsque l'on tente d'ajouter plus de 30 documents dans un envoi</td></tr>
+              <tr><td>INVALID_DOCUMENT_SIZE</td><td>La taille du document transmis dépasse les 20 Mo</td></tr>
+              <tr><td>INVALID_DOCUMENT_TYPE</td><td>Seuls les documents de type INVOICE peuvent apparaitre dans les bribes de documents d'un destinataire</td></tr>
+              <tr><td>INVALID_INVOICE_DATE</td><td>Date de facture ne peut pas être postérieure à la date du jour. Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRIORITY</td><td>Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRODUCTION_CENTER</td><td>Le centre de production est inconnu</td></tr>
+              <tr><td>INVALID_NOTIFICATION_EMAIL</td><td>L'email est invalide.</td></tr>
+              <tr><td>INVALID_NUMBER_COUNT</td><td>Le numéro de facture associé à l'expéditeur a déjà été utilisé dans le cadre d'un destinataire Chorus</td></tr>
+              <tr><td>INVALID_RECIPIENTS_COUNT</td><td>Le nombre de destinataires est atteint</td></tr>
+              <tr><td>INVALID_RECIPIENT_NOTIFICATION_TEMPLATE</td><td>The value of parameter `recipient_notification_template` is invalid</td></tr>
+              <tr><td>INVALID_SIRET</td><td>Siret invalide</td></tr>
+              <tr><td>INVALID_TOTAL_SENDING_SIZE</td><td>La somme des tailles de l'ensemble des documents dépasse 20 Mo</td></tr>
+              <tr><td>JSON_FORMAT_ERROR</td><td>Un problème dans le format JSON des données transmises</td></tr>
+              <tr><td>MAX_ATTRIBUTE_VALUE_EXEEDED</td><td>L'attribut ne peut pas dépasser une valeur maximale</td></tr>
+              <tr><td>METADATA_WRONG_FORMAT</td><td>Le paramètre metadata n'est pas correct</td></tr>
+              <tr><td>MISSING_FILE</td><td>Fichier à charger introuvable</td></tr>
+              <tr><td>NAME_TOO_LONG</td><td>Le nom de l'envoi est trop long (256 caractères max)</td></tr>
+              <tr><td>NO_INVOICE_ON_SENDING</td><td>Pas de facture dans l'envoi</td></tr>
+              <tr><td>NO_PARAMETER</td><td>Au moins un paramètre est requis</td></tr>
+              <tr><td>NO_RECIPIENT_ON_SENDING</td><td>Pas de destinataires dans l'envoi</td></tr>
+              <tr><td>OPERATION_IN_PROGRESS</td><td>L'opération est en cours. le résultat ne peut pas être fourni immédiatement</td></tr>
+              <tr><td>PAGES_NOT_MATCH</td><td>Incohérence entre la première page et la dernière page</td></tr>
+              <tr><td>PARAM_FILTER_NOT_ALLOWED</td><td>La valeur de l'attribut n'est pas acceptée. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>PARAM_NOT_ACCEPTED</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>POST_CHECK_MANDATORY_BEFORE_GET</td><td>Une demande de résultat d'une vérification d'un envoi a été reçue alors qu'aucune vérification n'a été lancée</td></tr>
+              <tr><td>RECIPIENT_NOT_FOUND</td><td>Ressource RECIPIENT introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>SENDING_NOT_FOUND</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>STATUS_NOT_DRAFT</td><td>Erreur quand on essaie d'ajouter un document ou un destinataire dans un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de soumettre un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de modifier une option d'un envoi qui n'est pas en état draft</td></tr>
+              <tr><td>SHEET_NUMBER_EXCEEDED</td><td>Nombre de feuilles maximales dépassé pour le type d'enveloppe</td></tr>
+              <tr><td>SIRET_ERROR</td><td>La plateforme Chorus Pro n'accepte pas le numéro de Siret</td></tr>
+              <tr><td>SIRET_RECIPIENT_COMMITMENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret, du code service exécutant et du numéro d'engagement juridique</td></tr>
+              <tr><td>SIRET_RECIPIENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret et du code service exécutant</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_DOCUMENT</td><td>Plusieurs documents ont été envoyés en multipart alors que le service limite à un document.</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_METADATA</td><td>Le paramètre metadata a été transmis plusieurs fois</td></tr>
+              <tr><td>UNEXPECTED_ERROR</td><td>Une erreur inattendue est intervenue </td></tr>
+              <tr><td>WRONG_FORMAT_ATTRIBUTE</td><td>Le format de l'attribut est incorrect</td></tr>
+            </table>
+        message:
+          type: string
+
+    sending_errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/sending_error_response'
+
+    sending_submit_error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+              <tr><td>ATTACHMENTS_EXCEED_MAX_SIZE</td><td>Les attachements ont dépassé la taille autorisée</td></tr>
+              <tr><td>ADDRESS_LINE_1_TOO_LONG</td><td>La ligne d'adresse n°1 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_2_TOO_LONG</td><td>La ligne d'adresse n°2 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_3_TOO_LONG</td><td>La ligne d'adresse n°3 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_4_TOO_LONG</td><td>La ligne d'adresse n°4 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_5_TOO_LONG</td><td>La ligne d'adresse n°5 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_TOO_LONG</td><td>La ligne d'adresse n°6 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_WRONG_FORMAT</td><td>Le champ address_line_6 doit avoir le format [CODE_POSTAL] [VILLE], avec CODE_POSTAL sur 5 chiffres, lorsque le code pays vaut "FR"</td></tr>
+              <tr><td>ALREADY_CHECK_SENDING</td><td>La vérification de l'envoi a déjà été réalisée</td></tr>
+              <tr><td>ATTRIBUTE_EXIST</td><td>L'attribut doit être unique et il existe déjà</td></tr>
+              <tr><td>ATTRIBUTE_MANDATORY</td><td>L'attribut est obligatoire. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_NOT_FOUND</td><td>L'attribut n'est pas trouvé. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_TOO_LONG</td><td>L'attribut est trop long. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>ATTRIBUTE_WRONG_PARAMETER</td><td>Un attribut est incorrect. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>CHECK_OBSOLETE_AFTER_SENDING_MODIFICATION</td><td>Après modification de l'envoi, le résultat de la vérification du check, lancée auparavant, est obsolète. Il faut relancer une nouvelle vérification</td></tr>
+              <tr><td>CORRUPTED_DOCUMENT</td><td>Le document est corrompu ou contient un virus</td></tr>
+              <tr><td>COUNTRY_CODE_TOO_LONG</td><td>Le code pays est limité à 2 caractères</td></tr>
+              <tr><td>CUSTOM_ID_EMPTY</td><td>Le custom id est vide</td></tr>
+              <tr><td>CUSTOM_ID_WRONG_FORMAT</td><td>Le custom id n'est pas au bon format</td></tr>
+              <tr><td>DOCUMENT_NOT_FOUND</td><td>Le document est introuvable</td></tr>
+              <tr><td>DOCUMENT_IN_DOCUMENTS_OVERRIDE</td><td>Impossible de supprimer le document puisque des bribes de document y font référence. Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_ID_NOT_ACCEPTED</td><td>Document introuvable en utilisant l'id fourni</td></tr>
+              <tr><td>DOC_NOT_ACCEPTED</td><td>Première page ou dernière page invalides pour le document spécifié</td></tr>
+              <tr><td>DOC_TYPE_NOT_ACCEPTED</td><td>Le type de document n'est pas accepté (.pdf, .doc, .docx, .rtf, .txt, .xls, .xlsx autorisés)</td></tr>
+              <tr><td>DUPLICATE_PRIORITY</td><td>Plusieurs documents ont la même priorité</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_1_OR_ADDRESS_LINE_2</td><td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ADDRESS_LINE_6</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>EMPTY_ATTRIBUTE</td><td>L'attribut est vide. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>EMPTY_DOCUMENT</td><td>Le document est vide</td></tr>
+              <tr><td>EMPTY_FILE_ID</td><td>L'identifiant de fichier est vide</td></tr>
+              <tr><td>EMPTY_PRODUCTION_CENTER</td><td>Le centre de production est vide</td></tr>
+              <tr><td>EMPTY_METADATA</td><td>Les méta-données sont vides</td></tr>
+              <tr><td>EMPTY_NAME</td><td>Aucun nom d'envoi n'a été transmis</td></tr>
+              <tr><td>EMPTY_PRIORITY</td><td>Le champ priority est vide</td></tr>
+              <tr><td>EMPTY_SCHEDULED_DATE</td><td>La date d'engagement de remise en poste est manquante</td></tr>
+              <tr><td>FORBIDDEN_PRINT_SENDER_ADDRESS_WITH_SIMPLE_ENVELOPPE_WINDOWS_TYPE</td><td>L'impression de l'adresse de l'expéditeur nécessite le choix d'une enveloppe à double fenêtres</td></tr>
+              <tr><td>FORBIDDEN_TREAT_UNDELIVERED_MAIL_AND_PRINT_SENDER_ADDRESS</td><td>L'impression de l'adresse de l'expéditeur n'est pas compatible avec la gestion électronique des PND</td></tr>
+              <tr><td>INVALID_COUNTRY_CODE</td><td>Le code pays n'est pas autorisé</td></tr>
+              <tr><td>INVALID_DOCUMENTS_COUNT</td><td>Erreur lorsque l'on tente d'ajouter plus de 30 documents dans un envoi</td></tr>
+              <tr><td>INVALID_DOCUMENT_SIZE</td><td>La taille du document transmis dépasse les 20 Mo</td></tr>
+              <tr><td>INVALID_DOCUMENT_TYPE</td><td>Seuls les documents de type INVOICE peuvent apparaitre dans les bribes de documents d'un destinataire</td></tr>
+              <tr><td>INVALID_INVOICE_DATE</td><td>Date de facture ne peut pas être postérieure à la date du jour. Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRIORITY</td><td>Le champ PRIORITY est nul</td></tr>
+              <tr><td>INVALID_PRODUCTION_CENTER</td><td>Le centre de production est inconnu</td></tr>
+              <tr><td>INVALID_NOTIFICATION_EMAIL</td><td>L'email est invalide.</td></tr>
+              <tr><td>INVALID_NUMBER_COUNT</td><td>Le numéro de facture associé à l'expéditeur a déjà été utilisé dans le cadre d'un destinataire Chorus</td></tr>
+              <tr><td>INVALID_RECIPIENTS_COUNT</td><td>Le nombre de destinataires est atteint</td></tr>
+              <tr><td>INVALID_SIRET</td><td>Siret invalide</td></tr>
+              <tr><td>INVALID_TOTAL_SENDING_SIZE</td><td>La somme des tailles de l'ensemble des documents dépasse 20 Mo</td></tr>
+              <tr><td>JSON_FORMAT_ERROR</td><td>Un problème dans le format JSON des données transmises</td></tr>
+              <tr><td>MAX_ATTRIBUTE_VALUE_EXEEDED</td><td>L'attribut ne peut pas dépasser une valeur maximale</td></tr>
+              <tr><td>METADATA_WRONG_FORMAT</td><td>Le paramètre metadata n'est pas correct</td></tr>
+              <tr><td>MISSING_FILE</td><td>Fichier à charger introuvable</td></tr>
+              <tr><td>NAME_TOO_LONG</td><td>Le nom de l'envoi est trop long (256 caractères max)</td></tr>
+              <tr><td>NO_INVOICE_ON_SENDING</td><td>Pas de facture dans l'envoi</td></tr>
+              <tr><td>NO_PARAMETER</td><td>Au moins un paramètre est requis</td></tr>
+              <tr><td>NO_RECIPIENT_ON_SENDING</td><td>Pas de destinataires dans l'envoi</td></tr>
+              <tr><td>OPERATION_IN_PROGRESS</td><td>L'opération est en cours. le résultat ne peut pas être fourni immédiatement</td></tr>
+              <tr><td>PAGES_NOT_MATCH</td><td>Incohérence entre la première page et la dernière page</td></tr>
+              <tr><td>PARAM_FILTER_NOT_ALLOWED</td><td>La valeur de l'attribut n'est pas acceptée. Le message de l'erreur fait référence à l'attribut concerné</td></tr>
+              <tr><td>PARAM_NOT_ACCEPTED</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>POST_CHECK_MANDATORY_BEFORE_GET</td><td>Une demande de résultat d'une vérification d'un envoi a été reçue alors qu'aucune vérification n'a été lancée</td></tr>
+              <tr><td>RECIPIENT_NOT_FOUND</td><td>Ressource RECIPIENT introuvable</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>PARAM_SORT_NOT_ALLOWED</td><td>Impossible de trier selon le paramètre fourni</td></tr>
+              <tr><td>SENDING_NOT_FOUND</td><td>Ressource SENDING introuvable</td></tr>
+              <tr><td>STATUS_NOT_DRAFT</td><td>Erreur quand on essaie d'ajouter un document ou un destinataire dans un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de soumettre un envoi qui n'est pas en état draft<br/>Erreur quand on essaie de modifier une option d'un envoi qui n'est pas en état draft</td></tr>
+              <tr><td>SHEET_NUMBER_EXCEEDED</td><td>Nombre de feuilles maximales dépassé pour le type d'enveloppe</td></tr>
+              <tr><td>SIRET_ERROR</td><td>La plateforme Chorus Pro n'accepte pas le numéro de Siret</td></tr>
+              <tr><td>SIRET_RECIPIENT_COMMITMENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret, du code service exécutant et du numéro d'engagement juridique</td></tr>
+              <tr><td>SIRET_RECIPIENT_ERROR</td><td>La plateforme Chorus Pro n'accepte pas la combinaison du numéro de Siret et du code service exécutant</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_DOCUMENT</td><td>Plusieurs documents ont été envoyés en multipart alors que le service limite à un document.</td></tr>
+              <tr><td>TOO_MANY_PARAMETER_METADATA</td><td>Le paramètre metadata a été transmis plusieurs fois</td></tr>
+              <tr><td>UNEXPECTED_ERROR</td><td>Une erreur inattendue est intervenue </td></tr>
+              <tr><td>WRONG_FORMAT_ATTRIBUTE</td><td>Le format de l'attribut est incorrect</td></tr>
+            </table>
+        message:
+          type: string
+
+
+
+
+    sending_check_error_response:
+      description: Description d'une erreur dans un check d'un envoi
+      type: object
+      required:
+        - sending
+        - recipients
+      properties:
+        sending:
+          type: array
+          items:
+            $ref: '#/components/schemas/sending_error_response'
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/recipient_check_error_response'
+
+    recipient_check_error_response:
+      type: object
+      properties:
+        recipient_id:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/recipient_error_response'
+
+    sending_submit_errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/sending_submit_error_response'
+
+    sending_check_errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/sending_check_error_response'
+
+    sending_response:
+      type: object
+      description: Un envoi de facture
+      properties:
+        id:
+          type: string
+          description: Identifiant d'un envoi
+          example: "110e8400-e29b-11d4-a716-446655440000"
+        name:
+          type: string
+          description: Nom d'un envoi
+          example: Facture d'un abonnement téléphonique
+        custom_id:
+          type: string
+          description: Identifiant de l'envoi défini par le client
+          example: "order_1234"
+        custom_data:
+          type: string
+          description: Information libre fournie par le client
+          example: "order_1234"
+        sending_tracking_reference:
+          type: string
+          description: référence (rfr) qui permet au client d'identifier l'envoi auprès du support
+          example: "4020110013K"
+        notification_email:
+          type: string
+          description: Email de notification
+          example: do_not_reply@maileva.com
+        sender_address_line_1:
+          description: Ligne d'adresse n°1 (Société) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "Société Durand"
+        sender_address_line_2:
+          description: Ligne d'adresse n°2 (Civilité, Prénom, Nom) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "M. Pierre DUPONT"
+        sender_address_line_3:
+          description: Ligne d'adresse n°3 (Résidence, Bâtiement ...) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "Batiment B"
+        sender_address_line_4:
+          description: Ligne d'adresse n°4 (N° et libellé de la voie) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "10 avenue Charles de Gaulle"
+        sender_address_line_5:
+          description: Ligne d'adresse n°5 (Lieu dit, BP...) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: ""
+        sender_address_line_6:
+          description: Ligne d'adresse n°6 (Code postal et ville) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: "94673 Charenton-Le-Pont"
+        sender_country_code:
+          $ref: '#/components/schemas/country_code'
+        sender_tax_number:
+          type: string
+          maxLength: 13
+          description: Numéro de TVA intra-communautaire de l’émetteur
+          example: "FR43424335693"
+        sender_siret:
+          type: string
+          maxLength: 14
+          description: Siret de l’émetteur
+          example: "42433569300083"
+        sender_company_name:
+          type: string
+          maxLength: 255
+          description: Raison sociale de l’émetteur
+          example: "Société DURAND"
+        email_options:
+          $ref: '#/components/schemas/email_options'
+        mail_options:
+          $ref: '#/components/schemas/mail_options'
+        portal_options:
+          $ref: '#/components/schemas/portal_options'
+        status:
+          $ref: '#/components/schemas/sending_status'
+        status_detail:
+          type: string
+          description: Détail d'un statut (cause du rejet)
+        creation_date:
+          type: string
+          format: datetime
+          description: Date de création
+          example: '2018-03-14T07:21:40.757Z'
+        modification_date:
+          type: string
+          format: datetime
+          description: Date de modification
+          example: '2018-03-14T07:21:40.757Z'
+        submission_date:
+          type: string
+          format: date-time
+          description: Date et heure de soumission
+          example: '2018-03-14T07:21:40.757Z'
+        scheduled_date:
+          type: string
+          format: date-time
+          description: Date et heure de planification
+          example: '2018-03-14T07:21:40.757Z'
+        processed_date:
+          type: string
+          format: date-time
+          description: Date et heure de production
+          example: '2018-03-14T07:21:40.757Z'
+        archive_date:
+          type: string
+          format: date-time
+          description: Date d'archivage de la dernière facture archivable
+          example: '2018-03-14T07:21:40.757Z'
+        documents_count:
+          type: integer
+          description: Nombre de documents dans l'envoi
+          example: 1
+        documents_size:
+          type: integer
+          description: Poids du document (en octets)
+        pages_count:
+          type: integer
+          description: Somme du nombre de pages de chaque destinataire. Ce nombre de pages inclut les pages porte-adresse (payantes ou obligatoires) mais n'inclut pas les pages blanches ajoutées au verso par Maileva.
+          example: 3
+        billed_pages_count:
+          type: integer
+          description: Nombre de pages facturées (disponible à partir du statut ACCEPTED). Ce nombre de pages inclut les pages porte-adresse payantes (DL) mais n'inclut pas les pages porte-adresse obligatoires (C4) ni les pages blanches ajoutées au verso par Maileva.
+          example: 3
+        recipients_counts:
+          $ref: '#/components/schemas/recipients_counts'
+
+    sendings_response:
+      type: object
+      required:
+        - sendings
+        - paging
+      description: Les envois
+      properties:
+        sendings:
+          type: array
+          items:
+            $ref: '#/components/schemas/sending_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+
+    sending_status:
+      type: string
+      description: >-
+        Statut d'un envoi :
+        <table border=1>
+          <tr>
+            <td>DRAFT</td>
+            <td>L'envoi est au statut de brouillon, non validé par l’utilisateur</td>
+          </tr>
+          <tr>
+            <td>PENDING</td>
+            <td>Le client a fait un envoi, mais il n’a pas encore été analysé par le système ou l'envoi a été reçu mais il n’a pas encore été analysé</td>
+          </tr>
+          <tr>
+            <td>ACCEPTED</td>
+            <td>L'envoi a été accepté et il sera traité</td>
+          </tr>
+          <tr>
+            <td>REJECTED</td>
+            <td>L'envoi est refusé</td>
+          </tr>
+          <tr>
+            <td>PROCESSED</td>
+            <td>L'envoi a été traité et tous les destinataires étaient valides</td>
+          </tr>
+          <tr>
+            <td>PROCESSED_WITH_ERRORS</td>
+            <td>L'envoi a été traité mais certains destinataires n’étaient pas valides</td>
+          </tr>
+        </table>
+      enum:
+        - DRAFT
+        - PENDING
+        - ACCEPTED
+        - REJECTED
+        - PROCESSED
+        - PROCESSED_WITH_ERRORS
+      example: PENDING
+
+    return_envelope:
+      type: object
+      description: >-
+        Enveloppe retour. Si l'enveloppe retour est une
+        enveloppe T (postréponse) et si un destinataire n'est pas en France
+        métropolitaine ou dans un DOM, alors le pli partira sans enveloppe
+        T. Cette option ajoute un délai d'un jour de production supplémentaire
+      properties:
+        type:
+          type: string
+          description: >-
+            Type d'enveloppe retour. FRANKING_ENVELOPE : Enveloppe à affranchir, PREPAID_ENVELOPE : Enveloppe T
+          enum:
+            - FRANKING_ENVELOPE
+            - PREPAID_ENVELOPE
+        id:
+          type: string
+          description: Identifiant de l'enveloppe retour
+          format: uuid
+
+  parameters:
+
+    document_id:
+      name: document_id
+      in: path
+      description: Identifiant du document
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+
+    import_recipients_id:
+      name: import_id
+      in: path
+      description: Identifiant de l'import
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+
+    paging_start_index:
+      name: start_index
+      in: query
+      description: Le premier élément à retourner
+      required: false
+      schema:
+        type: number
+        default: 1
+        minLength: 1
+
+    paging_count:
+      name: count
+      in: query
+      description: Le nombre d'élément à retourner
+      required: false
+      schema:
+        type: number
+        default: 50
+        minLength: 1
+        maxLength: 500
+
+    paging_documents_count:
+      name: count
+      in: query
+      description: Le nombre d'élément à retourner
+      required: false
+      schema:
+        type: number
+        default: 30
+        minLength: 1
+        maxLength: 30
+
+    recipient_id:
+      name: recipient_id
+      in: path
+      description: Identifiant du destinataire
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+
+    sending_id:
+      name: sending_id
+      in: path
+      description: Identifiant d'un envoi
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+
+paths:
+
+  /sendings:
+    post:
+      tags:
+        - Envoi
+      summary: Création d'un envoi
+      description: >-
+        Permet de créer un envoi.
+        
+        
+        Cet envoi sera en état de brouillon (DRAFT), il faudra le soumettre pour l'envoyer en production.
+        
+        
+        Un envoi nécessite de renseigner des informations complémentaires de deux types : 
+        
+        - globales à tous les canaux d'expédition;
+        
+        - spécifiques au canal d'expédition.
+        
+        
+        Les options à renseigner dépendent du canal d'expédition de la facture :
+        
+        
+        Envoi par email : 
+        
+        - identifiant du template d'email personnalisé pour la notification du destinataire ;
+        
+        - personnalisation du « nom/prénom » associé à l’adresse email de l’émetteur des factures dématérialisées ;
+        
+        - personnalisation de l’adresse email de retour
+        
+        - personnalisation de l’adresse email de l'expéditeur
+        
+        
+        
+        Envoi par portail : 
+        
+        - identifiant du template d'email personnalisé pour la notification du destinataire ;
+        
+        - personnalisation du « nom/prénom » associé à l’adresse email de l’émetteur des factures dématérialisées ;
+        
+        - personnalisation de l’adresse email de retour
+        
+        - personnalisation de l’adresse email de l'expéditeur
+        
+        
+        
+        Envoi vers chorus : 
+        
+        - numéro de TVA intra-communautaire de l’émetteur ;
+        
+        - siret de l’émetteur ;
+        
+        - raison sociale de l’émetteur.
+        
+        
+        Options pour les envois papier : 
+        
+        - coloris d'impression : couleur ou noir et blanc ;
+
+        - format d'impression : recto-verso ou recto seul ;
+
+        - ajout d'une page porte-adresse ;
+
+        - Le type d'enveloppe est choisi automatiquement. 1 à 5 feuilles (feuille porte-adresse et enveloppe retour incluses) : enveloppe DL. 6 à 45 feuilles (hors feuille porte-adresse, enveloppe retour incluse) : enveloppe C4 ;
+
+        - type de fenêtre sur l'enveloppe : simple ou double fenêtre ;
+
+        - type d'affranchissement : urgent, rapide ou économique ;
+
+        - email de notification ;
+
+        - impression de l'adresse expéditeur ;
+
+        - durée d'archivage optionnelle pour un envoi papier : 0 ou 11 ans. Pour un envoi dématérialisé, la durée d'archivage est automatiquement de 11 ans ;
+
+        - gestion électronique des plis non distribuables (PND) ;
+        
+        
+        La mise à disposition sur le portail de publication de factures nécessite de renseigner une combinaison d’options partagés avec d’autres canaux, telles que les informations sur l’expéditeur (siret, numéro de TVA intracommunautaire, raison sociale, adresse…). 
+        
+        
+        La selection du canal de distribution sera faite au niveau du destinataire.
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sending_creation'
+
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    get:
+      tags:
+        - Envoi
+      summary: Liste des envois
+      description: >-
+        Permet d'obtenir la liste des envois.
+
+      parameters:
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sendings_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}':
+    get:
+      tags:
+        - Envoi
+      summary: Détail d'un envoi
+      description: Permet de récupérer le détail d'un envoi à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    patch:
+      tags:
+        - Envoi
+      summary: Modification partielle d'un envoi
+      description: |-
+        Permet de modifier un envoi.
+
+        Seuls les envois en état de brouillon (DRAFT) peuvent être modifiés.
+
+        Seuls les paramètres pour lesquels une valeur est fournie sont modifiés.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/sending_creation'
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Envoi
+      summary: Suppression d'un envoi
+      description: |-
+        Permet de supprimer un envoi.
+
+        Seuls les envois en état de brouillon (DRAFT) peuvent être supprimés.
+
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/check':
+    post:
+      tags:
+        - Envoi
+      summary: Vérification d'un envoi avant finalisation.
+      description: |-
+        Permet de vérifier la validité d'un envoi avant de le soumettre et de déclencher ainsi la demande de
+        production. La vérification peut prendre du temps, la requête GET, sur le même chemin, est celle qui permet de récupérer ultérieurement le résultat de la validation.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '201':
+          description: Le traitement de la vérification est toujours en cours
+        '400':
+          description: Le traitement de la vérification est en cours et le client vient de lancer une nouvelle requête de vérification ; Envoi pas en draft ; Le hash calculé sur l'envoi permet de signaler qu'une vérification a été réalisée et rien n’a changé dans l'envoi qui justifie une nouvelle vérification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: L'envoi n'existe pas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    get:
+      tags:
+        - Envoi
+      summary: Récupération du résultat de la vérification d'un envoi avant finalisation
+      description: |-
+        Permet de récupérer le résultat de la vérification de la validité d'un envoi avant de le soumettre et de déclencher ainsi la demande de
+        production.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '204':
+          description: La vérification est en cours
+        '200':
+          description: L'envoi est valide
+        '404':
+          description: Aucune vérification n'a été lancée
+        '400':
+          description: L'envoi est invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_check_errors_response'
+
+  '/sendings/{sending_id}/submit':
+    post:
+      tags:
+        - Envoi
+      summary: Finalisation d'un envoi
+      description: |-
+        Permet de soumettre l'envoi et de déclencher ainsi la demande de production.
+
+        Un envoi soumis ne peut pas être annulé.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '202':
+          description: Accepted
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_submit_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/documents':
+    post:
+      tags:
+        - Documents
+      summary: Ajout d'un document à un envoi.
+      description: >-
+        Permet d'ajouter un document à un envoi.
+
+        Les types de documents autorisés sont :
+          - Adobe (.pdf)
+          - Word (.doc, .docx et .rtf)
+          - Texte (.txt)
+          - Excel (.xls, .xlsx)
+
+        Le document ajouté ne doit pas dépasser 20 Mo.
+
+        Le nombre total de documents est limité à 30 par envoi. Un envoi ne peut contenir au maximum que 5 pièces jointes (document de catégorie *ATTACHMENT*). Toutes les pièces jointes de l'envoi sont adressées à tous les destinataires.
+
+        Le document doit être transmis en mutipart ainsi que la metadata.
+        
+        
+        L'objet contenant les meta-données (*metadata*) est constitué de :
+        
+        - la priorité du document (*priority* permet de définir l'ordre
+        d'impression des documents) ;
+        
+        - l'intitulé du document (*name* permet de donner un nom au
+        fichier) 
+        
+        - la catégorie du document (*category* permet d'indiquer le type de document *INVOICE* pour facture et *ATTACHMENT* pour une pièce jointe. Par défaut le type sera *INVOICE* s'il n'est pas renseigné)
+
+        La première page du document est positionnée systématiquement sur le
+        recto de la feuille.
+
+
+        Le  nombre de feuilles d’un envoi par Courrier ne doit pas dépasser la capacité de l’enveloppe :
+
+        - Enveloppe grand format C4 (210x300 mm, Double fenêtre) : 45 feuilles maximum (hors feuille porte-adresse, enveloppe retour incluse)
+
+        - Enveloppe petit format DL (114x229 mm Simple ou Double-fenêtre) : 5 feuilles maximum (feuille porte-adresse et enveloppe retour incluses) 
+
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                document:
+                  type: string
+                  format: binary
+                metadata:
+                  type: object
+                  properties:
+                    priority:
+                      type: integer
+
+                    category:
+                      type: string
+                      description: >-
+                        Catégorie du document <br/>
+                        <table border="1">
+                          <tr bgcolor="lightgrey">
+                            <th>Code</th>
+                            <th>Description</th>
+                          </tr>
+                          <tr><td>INVOICE</td><td>Facture</td></tr>
+                          <tr><td>ATTACHMENT</td><td>Pièce jointe</td></tr>
+                        </table>
+                      enum:
+                        - INVOICE
+                        - ATTACHMENT
+                    name:
+                      type: string
+
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    get:
+      tags:
+        - Documents
+      summary: Liste des documents d'un envoi
+      description: >-
+        Permet de récupérer la liste des documents associés à un envoi.
+
+        La liste des documents d'un envoi est paginée. 
+        
+        
+        Par défaut et au
+        maximum, le nombre de résultats renvoyé est de 30.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_documents_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/documents_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/documents/{document_id}':
+    get:
+      tags:
+        - Documents
+      summary: Détail d'un document
+      description: >-
+        Permet de récupérer le détail d'un document associé à un envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/document_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Documents
+      summary: Suppression d'un document
+      description: Permet de supprimer un document d'un envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/document_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/documents/{document_id}/set_priority':
+    post:
+      tags:
+        - Documents
+      summary: Modification de la priorité d'un document
+      description: |-
+        Permet de définir la priorité d'un envoi.
+
+        Les documents seront imprimés et mis sous pli dans l'ordre choisi.
+        
+        Deux documents ne peuvent pas avoir la même priorité.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/document_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/priority'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/recipients':
+    post:
+      tags:
+        - Destinataires
+      summary: Ajout d'un destinataire à un envoi
+      description: |-
+        Permet d'ajouter un destinataire à un envoi. 
+        
+        
+        Le nombre de destinataires est limité à 30 000.
+
+        Chaque ligne d’adresse doit contenir au plus 38 caractères.
+        La ligne d’adresse 1 ou 2 doit être définie.
+        La ligne d’adresse 6 doit être définie. 
+        Pour les adresses françaises, la ligne d’adresse 6 doit contenir un code 
+        postal sur 5 chiffres, suivi d’un espace, suivi d’une ville.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/recipient_creation'
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    get:
+      tags:
+        - Destinataires
+      summary: Liste des destinataires d'un envoi
+      description: >-
+        Permet de récupérer la liste des destinataires d'un envoi.
+
+        Cette liste est paginée. Par défaut, la pagination est de 50
+        résultats. Elle peut atteindre 500 au maximum.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipients_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Destinataires
+      summary: Suppression de tous les destinataires d'un envoi
+      description: Permet de supprimer tous les destinataires d'un envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/recipients/{recipient_id}':
+    get:
+      tags:
+        - Destinataires
+      summary: Détail d'un destinataire
+      description: Permet d'obtenir le détail d'un destinataire dans un envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/recipient_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    patch:
+      tags:
+        - Destinataires
+      summary: Modification partielle d'un destinataire dans un envoi
+      description: Permet de modifier partiellement un destinataire dans un envoi.
+      operationId: patchRecipient
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/recipient_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/recipient_creation'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    delete:
+      tags:
+        - Destinataires
+      summary: Suppression d'un destinataire dans un envoi
+      description: Permet de supprimer un destinataire dans un envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/recipient_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/recipients/imports':
+    post:
+      tags:
+        - Destinataires
+      summary: Ajout d'un ou plusieurs destinataires à un envoi
+      description: >-
+
+        Permet d'ajouter un ou plusieurs destinataires à un envoi. 
+        
+        
+        Le nombre de destinataires à l'importation est limité à 30 000.
+
+
+        Chaque ligne d’adresse doit contenir au plus 38 caractères.
+        La ligne d’adresse 1 ou 2 doit être définie.
+        La ligne d’adresse 6 doit être définie.
+        Pour les adresses françaises, la ligne d’adresse 6 doit contenir 
+        un code postal sur 5 chiffres, suivi d’un espace, suivi d’une ville.
+
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/import_recipients'
+      responses:
+        '202':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/recipients/{recipient_id}/delivery_statuses':
+    get:
+      tags:
+        - Statuts de distribution
+      summary: Liste des statuts de distribution d'un destinataire
+      description: >-
+        Permet de lister les statuts de distribution d'un destinataire.
+
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/recipient_id'
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delivery_statuses_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/recipients/{recipient_id}/download_archive':
+    get:
+      tags:
+        - Destinataires
+      summary:
+        Permet de télécharger au format PDF la facture et les annexes envoyées au
+        destinataire
+      description: >-
+        Téléchargement de la facture et de ses annexes envoyées au destinataire (un seul document signé), ainsi que les pièces jointes, dans le cas où l'option d'archivage a été choisie pour les envois papier ou dématérialisés. Si la facture ne comporte pas de pièces jointes, la facture signée en PDF est téléchargée, sinon un fichier ZIP contenant la facture signée et les pièces jointes.
+
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/recipient_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'

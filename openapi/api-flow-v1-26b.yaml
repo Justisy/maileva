@@ -1,0 +1,1846 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://api.sandbox.maileva.net/flow/v1'
+    description: Sandbox
+  - url: 'https://api.maileva.com/flow/v1'
+    description: Production
+info:
+  version: '1.26'
+  title: Maileva / Gestion des règles de flux et envoi et suivi de flux
+  description: |-
+    API permettant de réaliser des envois à partir d'une règle d'envoi et de les suivre.
+
+    L'identifiant de la règle est accessible depuis l'espace client dans le détail de la règle, champ "identifiant technique".
+
+    Il est possible de suivre ces envois jusqu'à ce qu'ils deviennent des envois Courrier, des envois LREL, des envois Factures Clients, des envois LRE Qualifiées, ...
+
+    Pour avoir le suivi de production de ces envois, il faudra consulter 
+        l'API <a href="/catalogue-api/envoi-et-suivi-de-courriers/">Courrier</a>, 
+        ou l'API <a href="/catalogue-api/envoi-et-suivi-de-maileva-lrel/">LREL</a>, 
+        ou l'API <a href="/catalogue-api/envoi-et-suivi-de-factures-clients/">Factures Clients</a>,
+        ou l'API <a href="/catalogue-api/envoi-et-suivi-de-lre-qualifiees/">LRE Qualifiées</a>,
+        ...
+
+    Pour connaitre les notifications (webhooks) concernées par cette API, consultez la documentation de 
+        l'API <a href="/catalogue-api/notifications-webhooks/">notification_center</a>.
+
+security:
+  - bearerAuth: [ ]
+  - oAuth2PasswordProduction: [ ]
+  - oAuth2PasswordSandbox: [ ]
+
+paths:
+  '/sendings':
+    post:
+      tags:
+        - Envoi d'un flux
+      summary: Création d'un envoi de flux
+      description: >-
+        Permet de créer un envoi de flux. Avant de procéder à la création de l'envoi, il est nécessaire de créer d'avoir créé une règle en amont et de récupérer son identifiant.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sending_creation'
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    get:
+      tags:
+        - Envoi d'un flux
+      summary: Liste des envois d'un flux
+      description: >-
+        Permet d'obtenir la liste des envois.
+
+
+        Il est possible de rajouter un attribut dans les paramètres afin de
+        filtrer la liste des envois. La liste des envois peut être paginée. Par
+        défaut, la pagination est de 50 résultats. Elle peut être modifiée pour
+        atteindre jusqu'à 500 résultats.
+      parameters:
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sendings_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}':
+    get:
+      tags:
+        - Envoi d'un flux
+      summary: Détail d'un envoi de flux
+      description: Permet de récupérer un envoi de flux à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    patch:
+      tags:
+        - Envoi d'un flux
+      summary: Modification des options d'envoi
+      description: >-
+        Permet de modifier le nom de l'envoi ou la règle associée à l'envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/sending_modification'
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sending_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Envoi d'un flux
+      summary: Suppression d'un envoi de flux
+      description: Permet de supprimer un envoi de flux.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/submit':
+    post:
+      tags:
+        - Envoi d'un flux
+      summary: Finalisation d'un envoi
+      description: >-
+        Permet de valider l'envoi et de déclencher ainsi la demande de
+        production. Avant la soumission de l'envoi il est important de vérifier le statut du document pour s'assurer de son bon traitement.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/documents':
+    post:
+      tags:
+        - Documents de l'envoi
+      summary: Ajout d'un document à l'envoi.
+      description: >-
+        Permet d'ajouter un document PDF à l'envoi.
+
+        Seuls les fichier PDF sont autorisés.
+        Le document ajouté ne doit pas dépasser 50 Mo.
+
+        Le document doit être transmis en mutipart ainsi que la metadata. La
+        metadata est constituée de *hcode* (s'il est présent, cela permet de demander la vérification du md5) et de *name* (permet de donner un nom au
+        fichier). Il important de suivre le statut du document avant de soumettre l'envoi pour s'assurer de son traitement.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - document
+                - metadata
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: binaire du document en multipart
+                metadata:
+                  type: object
+                  required:
+                    - name
+                    - priority
+                    - type
+                  properties:
+                    name:
+                      type: string
+                      description: Nom du document
+                      example: template_facture_standard
+                    hcode:
+                      type: string
+                      description: Empreinte MD5 du document. Si ce champ est présent alors une vérification sera faite.
+                      example: "c628e5f1d622d72a9d4557888c14bcb9"
+                    priority:
+                      type: integer
+                      description: Priorité du document. Ce document sera associé à la règle d'analyse ayanty la même priorité.
+                      example: 1
+                    #                    href:
+                    #                      type: string
+                    #                      description: Url du document en remplacement du binaire. Url uniquement de type /sendings/{id}/documents/{id} pour le moment
+                    #                      example: "/sendings/110e8400-e29b-11d4-a716-446655440000/documents/4cd97ac3-0e18-46db-897b-906365cd60a9"
+                    type:
+                      description: Permet de connaître la limite d'un type de document lors de l'envoi
+                      type: string
+                      enum:
+                        - MAIN_DOCUMENT
+                        - ANNEX
+                    shrink:
+                      description: Permet de choisir le redimensionnement de mon document
+                      type: boolean
+                      default: true
+
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    get:
+      tags:
+        - Documents de l'envoi
+      summary: Liste des documents
+      description: >-
+        Permet de récupérer la liste des documents associés à l'envoi afin de vérifier l'état du traitement des documents.
+
+        La liste des documents d'un envoi peut être paginée. Par défaut et au
+        maximum, la pagination est de 50 résultats.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/documents_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  '/sendings/{sending_id}/documents/{document_id}':
+    get:
+      tags:
+        - Documents de l'envoi
+      summary: Détail d'un document
+      description: >-
+        Permet de récupérer le détail d'un document utilisé pour lors de l'envoi.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/document_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    delete:
+      tags:
+        - Documents de l'envoi
+      summary: Suppression d'un document
+      description: Permet de supprimer un document d'un envoi avant sa soumission.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/document_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    patch:
+      tags:
+        - Documents de l'envoi
+      summary: Modification d'un document
+      description: Permet de modifier un document d'un envoi avant sa soumission.
+      parameters:
+        - $ref: '#/components/parameters/sending_id'
+        - $ref: '#/components/parameters/document_id'
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/document_modification'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/document_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+
+  '/contract_options/':
+    get:
+      tags:
+        - Plafond de règles
+      summary: Information sur le nombre de règles et les plafonds
+      description: Permet d'avoir l'information sur le nombre de règles et les plafonds.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contract_option_public'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      description: "Indiquez le token directement obtenu via la méthode suivante :
+
+        curl -X POST 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+        -u 'my_client_id:my_client_secret' \
+        -d 'grant_type=password&username=my_user_login&password=my_user_password' \
+        -v"
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oAuth2PasswordProduction:
+      description: authentification oAuth2 en mode password sur l'environnment de production
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: Grants all access
+    oAuth2PasswordSandbox:
+      description: authentification oAuth2 en mode password sur l'environnment Sandbox
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.sandbox.maileva.net/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: Grants all access
+
+  schemas:
+    version:
+      description: Numéro de vesrion de la règle
+      type: number
+      format: double
+      example: '1.000000'
+    creation_date:
+      description: Date et heure de création
+      type: string
+      format: date-time
+      example: '2018-03-14T07:21:40.757Z'
+    modification_date:
+      description: Date et heure de modification
+      type: string
+      format: date-time
+      example: '2018-03-14T07:21:40.757Z'
+    country_code:
+      description: Code du pays (Code ISO-3166)
+      type: string
+      enum: [ AD, AE, AF, AG, AI, AL, AM, AN, AO, AQ, AR, AS, AT, AU, AW, AX, AZ, BA, BB, BD, BE, BF, BG, BH, BI, BJ, BL, BM, BN, BO, BQ, BR, BS, BT, BV, BW, BY, BZ, CA, CC, CD, CF, CG, CH, CI, CK, CL, CM, CN, CO, CR, CS, CU, CV, CW, CX, CY, CZ, DE, DJ, DK, DM, DO, DZ, EC, EE, EG, EH, ER, ES, ET, FI, FJ, FK, FM, FO, FR, GA, GB, GD, GE, GF, GG, GH, GI, GL, GM, GN, GP, GQ, GR, GS, GT, GU, GW, GY, HK, HM, HN, HR, HT, HU, ID, IE, IL, IM, IN, IO, IQ, IR, IS, IT, JE, JM, JO, JP, KE, KG, KH, KI, KM, KN, KP, KR, KW, KY, KZ, LA, LB, LC, LI, LK, LR, LS, LT, LU, LV, LY, MA, MC, MD, ME, MF, MG, MH, MK, ML, MM, MN, MO, MP, MQ, MR, MS, MT, MU, MV, MW, MX, MY, MZ, NA, NC, NE, NF, NG, NI, NL, NO, NP, NR, NU, NZ, OM, PA, PE, PF, PG, PH, PK, PL, PM, PN, PR, PS, PT, PW, PY, QA, RE, RO, RS, RU, RW, SA, SB, SC, SD, SE, SG, SH, SI, SJ, SK, SL, SM, SN, SO, SR, SS, ST, SV, SX, SY, SZ, TC, TD, TF, TG, TH, TJ, TK, TL, TM, TN, TO, TP, TR, TT, TV, TW, TZ, UA, UG, UM, US, UY, UZ, VA, VC, VE, VG, VI, VN, VU, WF, WS, YE, YT, YU, ZA, ZM, ZR, ZW ]
+      example: FR
+    grouping:
+      description: traitement de regroupement
+      type: boolean
+      default: false
+      example: false
+    color_printing:
+      type: boolean
+      description: Impression couleur
+      default: true
+      example: true
+    duplex_printing:
+      type: boolean
+      description: Impression recto verso
+      default: true
+      example: true
+    print_recipient_custom_id:
+      type: boolean
+      description: L’option impression de la référence destinataire (ou référence du pli)
+      default: false
+    optional_address_sheet:
+      description: Feuille porte adresse optionnelle (payante)
+      type: boolean
+      example: false
+    notification_email:
+      description: E-mail du destinataire des notifications
+      type: string
+      example: jean.dupont@mycompany.com
+    treat_undelivered_mail:
+      description: Gestion électronique des PND
+      type: boolean
+      example: false
+    notification_treat_undelivered_mail:
+      type: array
+      description: Liste des emails de notification des PND
+      items:
+        type: string
+      example: [ "email@domain.com","email_bis@domain.com" ]
+    print_sender_address:
+      description: Impression de l'adresse expéditeur (false par défaut)
+      type: boolean
+      example: false
+    envelope_windows_type:
+      description: enveloppe simple ou double fenêtre (si format C6)
+      type: string
+      enum:
+        - SIMPLE
+        - DOUBLE
+      example: SIMPLE
+    postage_type_mail:
+      description: Type d'affranchissement d'un envoi. FAST >> pour J+3, ECONOMIC >> pour J+4
+      type: string
+      enum:
+        - FAST
+        - ECONOMIC
+    acknowledgement_of_receipt:
+      description: Avis de réception (AR)
+      type: boolean
+      example: true
+    acknowledgement_of_receipt_scanning:
+      description: Gestion électronique des avis de réception (AR). Cette option indique que Maileva doit recevoir, numériser, mettre en ligne l’image et archiver physiquement les Avis de Réception. Pour cela, la première ligne de l’adresse de l’expéditeur sera conservée, mais les 5 autres lignes et le pays seront remplacés par l’adresse de Maileva. Cette option nécessite que l’option avis de réception soit activée.
+      type: boolean
+      example: false
+    postage_type_registered_mail_v4:
+      description: Type d'affranchissement d'un envoi pour Maileva LREL. FAST >> pour J+3, URGENT >> pour J+2
+      type: string
+      enum:
+        - FAST
+        - URGENT
+    returned_mail_scanning:
+      type: boolean
+      description: Gestion électronique des PND et des AR residuels
+      default: false
+      example: false
+    reference_to_print_enabled:
+      type: boolean
+      description: L’option impression de la référence destinataire (ou référence du pli)
+      default: false
+    notification_types:
+      description: Types de notifications
+      example: [ ALL_MAILEVA, ALL_LAPOSTE ]
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/notification_type'
+    sending_rule_reference:
+      description: Référence de la règle
+      type: string
+      example: RE81060000T
+    sharings:
+      type: array
+      description: Liste du partage de la règle
+      items:
+        $ref: '#/components/schemas/sharing'
+    sharing:
+      description: partage de la règle
+      type: object
+      properties:
+        id:
+          description: Identifiant du partage
+          type: string
+          format: uuid
+          example: "157b8204-1e63-4c36-a198-f49466b041aa"
+        target_user_login:
+          description: login du destinataire à partager
+          type: string
+          example: testclient
+        creation_date:
+          $ref: '#/components/schemas/creation_date'
+        share_level:
+          type: string
+          description: Niveau de partage
+          enum:
+            - USE
+    document_type:
+      description: Type de document. MAIN_DOCUMENT=chaque découpage de ce document donnera lieu à un destinataire, ANNEX=ce document sera rattaché à tous les destinataires du document principal
+      #      ATTACHMENT=chaque découpage de ce document sera rattaché à un destinataire du document principal (s'il existe) ayant le même code de regroupement,
+      type: string
+      enum:
+        - MAIN_DOCUMENT
+        #        - ATTACHMENT
+        - ANNEX
+      example: MAIN_DOCUMENT
+    documents_response:
+      description: Les documents d'un envoi
+      type: object
+      required:
+        - documents
+        - paging
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/document_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+    error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            Description de l'erreur
+
+              <table border="1">
+                <tr bgcolor="lightgrey">
+                  <th>Code</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>DOCUMENT_NOT_FOUND</td>
+                  <td>Le document est introuvable</td>
+                </tr>
+                <tr>
+                  <td>DOCTYPE_NOT_ACCEPTED</td>
+                  <td>Le type de document n'est pas accepté (.pdf, .doc, .docx, .rtf, .txt, .xls, .xlsx autorisés)</td>
+                </tr>
+                <tr>
+                  <td>EMPTY_DOCUMENT</td>
+                  <td>Le document est vide</td>
+                </tr>
+                <tr>
+                  <td>EMPTY_FILE_ID</td>
+                  <td>L'identifiant de fichier est vide</td>
+                </tr>
+                <tr>
+                  <td>EMPTY_METADATA</td>
+                  <td>Les méta-données sont vides</td>
+                </tr>
+                <tr>
+                  <td>EMPTY_PRIORITY</td>
+                  <td>Le champ priority est vide</td>
+                </tr>
+                <tr>
+                  <td>EMPTY_SENDING_NAME</td>
+                  <td>Aucun nom d'envoi n'a été transmis</td>
+                </tr>
+                <tr>
+                  <td>INVALID_DOCUMENTS_NUMBER</td>
+                  <td>Erreur lorsque l'on tente d'ajouter plus de 30 documents dans un envoi</td>
+                </tr>
+                <tr>
+                  <td>INVALID_DOCUMENT_SIZE</td>
+                  <td>La taille du document transmis dépasse les 10 Mo</td>
+                </tr>
+                <tr>
+                  <td>INVALID_TOTAL_SENDING_SIZE</td>
+                  <td>La somme des tailles de l'ensemble des documents dépasse 20 Mo</td>
+                </tr>
+                <tr>
+                  <td>LINE1_OR_LINE2_EMPTY</td>
+                  <td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td>
+                </tr>
+                <tr>
+                  <td>LINE6_EMPTY</td>
+                  <td>La ligne d'adresse n°6 doit être renseignée</td>
+                </tr>
+                <tr>
+                  <td>LONGER_SENDING_NAME_ERROR</td>
+                  <td>Le nom de l'envoi est trop long  (256 caractères max)</td>
+                </tr>
+                <tr>
+                  <td>META_DATA_WRONG_FORMAT</td>
+                  <td>Le paramètre metadata n'est pas correct</td>
+                </tr>
+                <tr>
+                  <td>MORE_ONE_PARAMETRE_DOCUMENT</td>
+                  <td>Plusieurs documents ont été envoyés en multipart alors que le service limite à un document.</td>
+                </tr>
+                <tr>
+                  <td>MORE_ONE_PARAMETRE_METADATA</td>
+                  <td>Le paramètre metadata a été transmis plusieurs fois</td>
+                </tr>
+                <tr>
+                  <td>NOTIFICATION_EMAIL_NOT_ACCEPTED</td>
+                  <td>L'email est invalide.</td>
+                </tr>
+                <tr>
+                  <td>NULL_PRIORITY</td>
+                  <td>Le champ PRIORITY est nul</td>
+                </tr>
+                <tr>
+                  <td>RECIPIENT_NOT_FOUND</td>
+                  <td>Ressource RECIPIENT introuvable</td>
+                </tr>
+                <tr>
+                  <td>SENDING_NOT_FOUND</td>
+                  <td>Ressource SENDING introuvable</td>
+                </tr>
+                <tr>
+                  <td>SENDING_STATUS_PERMISSION_ADD</td>
+                  <td>Erreur quand on essaie d'ajouter un document ou un destinataire dans un envoi qui n'est pas en état draft</td>
+                </tr>
+                <tr>
+                  <td>SENDING_STATUT_PERMISSION_DELETE</td>
+                  <td>Erreur quand on essaie de supprimer un envoi qui n'est pas en état draft</td>
+                </tr>
+                <tr>
+                  <td>SENDING_STATUT_PERMISSION_SUBMIT</td>
+                  <td>Erreur quand on essaie de soumettre un envoi qui n'est pas en état draft</td>
+                </tr>
+                <tr>
+                  <td>SENDING_STATUS_PERMISSION_UPDATE_OPTION</td>
+                  <td>Erreur quand on essaie de modifier une option d'un envoi qui n'est pas en état draft</td>
+                </tr>
+                <tr>
+                  <td>ZIP_CODE_WRONG_FORMAT</td>
+                  <td>Erreur quand le code pays est à NULL ou quand le code pays vaut "FR" et que le code postal n'est pas sur 5 chiffres et que le champs address_line_6 n'est pas formaté en [CODE POSTAL] [VILLE]</td>
+                </tr>
+                <tr>
+                  <td>LINE1_TOO_LONG</td>
+                  <td>La ligne d'adresse n°1 est limitée à 38 caractères</td>
+                </tr>
+                <tr>
+                  <td>LINE2_TOO_LONG</td>
+                  <td>La ligne d'adresse n°2 est limitée à 38 caractères</td>
+                </tr>
+                <tr>
+                  <td>LINE3_TOO_LONG</td>
+                  <td>La ligne d'adresse n°3 est limitée à 38 caractères</td>
+                </tr>
+                <tr>
+                  <td>LINE4_TOO_LONG</td>
+                  <td>La ligne d'adresse n°4 est limitée à 38 caractères</td>
+                </tr>
+                <tr>
+                  <td>LINE5_TOO_LONG</td>
+                  <td>La ligne d'adresse n°5 est limitée à 38 caractères</td>
+                </tr>
+                <tr>
+                  <td>LINE6_TOO_LONG</td>
+                  <td>La ligne d'adresse n°6 est limitée à 38 caractères</td>
+                </tr>
+                <tr>
+                  <td>COUNTRY_CODE_TOO_LONG</td>
+                  <td>Le code pays est limité à 2 caractères</td>
+                </tr>
+                <tr>
+                  <td>COUNTRY_CODE_UNAVAILABLE</td>
+                  <td>Le code pays n'est pas autorisé</td>
+                </tr>
+                <tr>
+                  <td>DUPLICATE_PRIORITY</td>
+                  <td>Plusieurs documents ont la même priorité</td>
+                </tr>
+                <tr>
+                  <td>INVALID_RECIPIENTS_NUMBER</td>
+                  <td>Le nombre de destinataires est atteint</td>
+                </tr>
+                <tr>
+                  <td>NO_MAJOR_VERSION_SENDING_RULE_ID</td>
+                  <td>La version majeur n'existe pas</td>
+                </tr>
+                <tr>
+                  <td>CONTRACT_ID_MANDATORY</td>
+                  <td>Le contrat du client est requis</td>
+                </tr>
+                <tr>
+                  <td>MAX_SENDING_RULES_MANDATORY</td>
+                  <td>Le nombre maximum de règles est requis</td>
+                </tr>
+                <tr>
+                  <td>UNAUTHORIZED_MODIFICATION</td>
+                  <td>La modification du plafond de règle n'est pas autorisée</td>
+                </tr>
+                <tr>
+                <td>LIMIT_ALREADY_EXISTS_FOR_CONTRACT_ID</td>
+                  <td>La limite du plafond existe déjà pour ce contrat</td>
+                </tr>
+                <td>INVALID_CONTRACT_OPTION_ID</td>
+                  <td>L'option du contrat est invalide</td>
+                </tr>
+                <td>INVALID_CUSTOMER_OPTION_ID</td>
+                  <td>L'option du client est invalide</td>
+                </tr>
+                <td>INVALID_MAX_SENDING_RULES</td>
+                  <td>Le paramètre max_sending_rules est invalide</td>
+                </tr>
+                <td>MAX_SENDING_RULES_MANDATORY</td>
+                  <td>Le paramètre max_sending_rules est requis</td>
+                </tr>
+                <td>NO_PARAMETER</td>
+                  <td>Au moins un paramètre est requis</td>
+                </tr>
+                </tr>
+                <td>CONTRACT_OPTION_NOT_FOUND</td>
+                  <td>L'option du contrat est introuvable</td>
+                </tr>
+              </table>
+
+
+        message:
+          type: string
+
+    errors_response:
+      description: Liste de descriptions d'erreurs
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/error_response'
+
+    paging_response:
+      description: Pagination des résultats
+      type: object
+      properties:
+        next:
+          description: Page suivante
+          type: string
+        prev:
+          description: Page précédente
+          type: string
+        total_results:
+          description: Nombre de résultats
+          type: number
+          example: 1
+
+    sending_creation:
+      description: Envoi
+      allOf:
+        - type: object
+          properties:
+            name:
+              $ref: '#/components/schemas/sending_name'
+            sending_rule_id:
+              $ref: '#/components/schemas/sending_rule_id'
+            scheduled_date:
+              description: Date et heure de planification (l'heure est optionnelle pour les envois de courrier)
+              type: string
+              format: date
+              example: '2018-03-14'
+            reject_on_failed_grouping_recipient:
+              $ref: '#/components/schemas/reject_on_failed_grouping_recipient'
+            custom_id:
+              $ref: '#/components/schemas/sending_custom_id'
+            custom_data:
+              type: string
+              maxLength: 255
+              description: Information libre fournie par le client
+              example: "order_1234"
+        - $ref: '#/components/schemas/sender_address'
+    sending_modification:
+      description: Modification d'un envoi
+      allOf:
+        - $ref: '#/components/schemas/sending_creation'
+        - type: object
+          properties:
+            notification_email:
+              $ref: '#/components/schemas/notification_email'
+            notification_treat_undelivered_mail:
+              $ref: '#/components/schemas/notification_treat_undelivered_mail'
+            notification_language:
+              $ref: '#/components/schemas/notification_language'
+            returned_mail_scanning:
+              type: boolean
+              description: Gestion électronique des PND et des AR residuels
+              default: false
+              example: false
+            notification_types:
+              $ref: '#/components/schemas/notification_types'
+            pre_notification:
+              $ref: '#/components/schemas/pre_notification'
+            message:
+              $ref: '#/components/schemas/message'
+            additional_sender_name:
+              $ref: '#/components/schemas/additional_sender_name'
+            page_background:
+              $ref: '#/components/schemas/page_background'
+    sending_response:
+      description: Détail d'un envoi
+      type: object
+      properties:
+        id:
+          description: Identifiant d'un envoi
+          type: string
+          format: uuid
+          example: "110e8400-e29b-11d4-a716-446655440000"
+        name:
+          $ref: '#/components/schemas/sending_name'
+        status:
+          $ref: '#/components/schemas/sending_status'
+        status_detail:
+          description: Détail d'un statut (cause du rejet)
+          type: string
+          example: SCHEDULE_DATE_WRONG_PARAMETER
+        sending_rule_id:
+          $ref: '#/components/schemas/sending_rule_id'
+        sending_rule_version:
+          $ref: '#/components/schemas/version'
+        creation_date:
+          $ref: '#/components/schemas/creation_date'
+        modification_date:
+          $ref: '#/components/schemas/modification_date'
+        submission_date:
+          description: Date et heure de soumission
+          type: string
+          format: date-time
+          example: '2018-03-14T07:21:40.757Z'
+        scheduled_date:
+          description: Date et heure de planification
+          type: string
+          format: date
+          example: '2018-03-14'
+        custom_id:
+          $ref: '#/components/schemas/sending_custom_id'
+        recipients_count:
+          description: Nombre de destinataires
+          type: integer
+          example: 10
+        documents_count:
+          description: Nombre de documents
+          type: integer
+          example: 1
+        documents_size:
+          description: Poids total des documents (en octets)
+          type: integer
+          example: 1032356
+        product:
+          $ref: '#/components/schemas/product'
+        grouping:
+          $ref: '#/components/schemas/grouping'
+        has_failed_grouping_recipient:
+          description: il y a au moins un destinataire regroupable et non regroupé est en erreur
+          type: boolean
+          example: false
+        product_id:
+          $ref: '#/components/schemas/product_id'
+        product_href:
+          description: URL de l'envoi lié au produit concerné
+          type: string
+          example: https://api.maileva.com/mail/v2/sendings/d5fb0158-4189-4637-859f-ee479f0c8ea8
+        last_simulation_href:
+          description: URL de la dernière simulation ayant servi à l'envoi. Lorsque l'envoi a été soumis, cette simulation contient la liste des destinataires dont ceux en erreur.
+          type: string
+          example: https://api.maileva.com/flow/v1/sendings/e20430c7-2b4a-4d1d-8f32-ffab783dbfc7/simulations/a31d7c69-eb6b-45e5-94b9-52085d377f41
+        valid:
+          description: statut de l'envoi
+          type: boolean
+          example: false
+        product_errors:
+          type: array
+          description: liste des codes d'erreur retournés pour l'envoi
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                description: code d'erreur retourné pour l'envoi
+                example: ZIP_CODE_WRONG_FORMAT
+              message:
+                type: string
+                description: message d'erreur retourné pour l'envoi
+                example: For French addresses, the address line 6 must contain a ZIP code of 5 digits, followed by a space, followed by a city.
+        color_printing:
+          $ref: '#/components/schemas/color_printing'
+        duplex_printing:
+          $ref: '#/components/schemas/duplex_printing'
+        optional_address_sheet:
+          $ref: '#/components/schemas/optional_address_sheet'
+        print_sender_address:
+          $ref: '#/components/schemas/print_sender_address'
+        sender_address_line_1:
+          description: Ligne d'adresse n°1 (Société) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: MyCompany
+        sender_address_line_2:
+          description: 'Ligne d''adresse n°2 (Civilité, Prénom, Nom) de l''expéditeur'
+          type: string
+          maxLength: 38
+          example: M. Pierre DUPONT
+        sender_address_line_3:
+          description: 'Ligne d''adresse n°3 (Résidence, Bâtiment ...) de l''expéditeur'
+          type: string
+          maxLength: 38
+          example: Batiment B
+        sender_address_line_4:
+          description: Ligne d'adresse n°4 (N° et libellé de la voie) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: 10 avenue Charles de Gaulle
+        sender_address_line_5:
+          description: 'Ligne d''adresse n°5 (Lieu dit, BP...) de l''expéditeur'
+          type: string
+          maxLength: 38
+          example: ''
+        sender_address_line_6:
+          description: Ligne d'adresse n°6 (Code postal et ville) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: 94673 Charenton-Le-Pont
+        sender_country_code:
+          $ref: '#/components/schemas/country_code'
+        acknowledgement_of_receipt:
+          $ref: '#/components/schemas/acknowledgement_of_receipt'
+        acknowledgement_of_receipt_scanning:
+          $ref: '#/components/schemas/acknowledgement_of_receipt_scanning'
+        reference_to_print_enabled:
+          $ref: '#/components/schemas/reference_to_print_enabled'
+        returned_mail_scanning:
+          $ref: '#/components/schemas/returned_mail_scanning'
+        notification_types:
+          $ref: '#/components/schemas/notification_types'
+        archiving_duration:
+          description: Durée d'archivage en années
+          type: integer
+          enum:
+            - 0
+            - 1
+            - 3
+            - 6
+            - 10
+          example: 3
+        envelope_windows_type:
+          $ref: '#/components/schemas/envelope_windows_type'
+        postage_type:
+          $ref: '#/components/schemas/postage_type_mail'
+        notification_email:
+          $ref: '#/components/schemas/notification_email'
+        pre_notification:
+          $ref: '#/components/schemas/pre_notification'
+        message:
+          $ref: '#/components/schemas/message'
+        additional_sender_name:
+          $ref: '#/components/schemas/additional_sender_name'
+        notification_language:
+          $ref: '#/components/schemas/notification_language'
+        treat_undelivered_mail:
+          $ref: '#/components/schemas/treat_undelivered_mail'
+        notification_treat_undelivered_mail:
+          $ref: '#/components/schemas/notification_treat_undelivered_mail'
+        return_envelope:
+          $ref: '#/components/schemas/return_envelope'
+        page_background:
+          $ref: '#/components/schemas/page_background'
+        page_insertion:
+          $ref: '#/components/schemas/page_insertion'
+        print_recipient_custom_id:
+          $ref: '#/components/schemas/print_recipient_custom_id'
+        sending_modes:
+          type: array
+          description: Modes d'envoi
+          items:
+            $ref: '#/components/schemas/sending_mode'
+          example: [ "MAIL","EMAIL","CHORUS","PORTAL" ]
+        sender_tax_number:
+          $ref: '#/components/schemas/sender_tax_number'
+        sender_siret:
+          $ref: '#/components/schemas/sender_siret'
+        sender_company_name:
+          $ref: '#/components/schemas/sender_company_name'
+        portal_options:
+          $ref: '#/components/schemas/invoice_portal_options'
+        email_options:
+          $ref: '#/components/schemas/invoice_email_options'
+        mail_options:
+          $ref: '#/components/schemas/invoice_mail_options'
+    sendings_response:
+      description: Liste d'envois
+      type: object
+      required:
+        - sendings
+        - paging
+      properties:
+        sendings:
+          type: array
+          items:
+            $ref: '#/components/schemas/sending_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+    sending_name:
+      description: Nom de l'envoi
+      type: string
+      maxLength: 256
+      minLength: 1
+      example: Envoi de factures
+    sending_status:
+      description: >-
+        Statut d'un envoi : <table border="1">
+        <tr><td>DRAFT</td>
+          <td>L'envoi est au statut de brouillon, non validé par l’utilisateur</td></tr>
+        <tr><td>PENDING</td>
+          <td>L'envoi a été soumis mais il est en attente que la création de l'envoi produit</td></tr>
+        <tr><td>SUBMITTED</td>
+          <td>L'envoi a été soumis et l'envoi produit a été crée et tous les destinataires étaient valides</td></tr>
+        <tr><td>SUBMITTED_WITH_ERRORS</td>
+          <td>L'envoi a été soumis et l'envoi produit a été crée mais certains destinataires n’étaient pas valides</td></tr>
+        <tr><td>REJECTED</td>
+          <td>L'envoi est refusé</td></tr>
+        <tr><td>SAVED</td>
+          <td>L'envoi a été sauvegardé comme exemple</td> </tr>
+        </table>
+      type: string
+      enum:
+        - DRAFT
+        - PENDING
+        - SUBMITTED
+        - SUBMITTED_WITH_ERRORS
+        - REJECTED
+        - SAVED
+      example: DRAFT
+
+    sender_address:
+      type: object
+      properties:
+        sender_address_line_1:
+          description: Ligne d'adresse n°1 (Société) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: MyCompany
+        sender_address_line_2:
+          description: 'Ligne d''adresse n°2 (Civilité, Prénom, Nom) de l''expéditeur'
+          type: string
+          maxLength: 38
+          example: M. Pierre DUPONT
+        sender_address_line_3:
+          description: 'Ligne d''adresse n°3 (Résidence, Bâtiment ...) de l''expéditeur'
+          type: string
+          maxLength: 38
+          example: Batiment B
+        sender_address_line_4:
+          description: Ligne d'adresse n°4 (N° et libellé de la voie) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: 10 avenue Charles de Gaulle
+        sender_address_line_5:
+          description: 'Ligne d''adresse n°5 (Lieu dit, BP...) de l''expéditeur'
+          type: string
+          maxLength: 38
+          example: ''
+        sender_address_line_6:
+          description: Ligne d'adresse n°6 (Code postal et ville) de l'expéditeur
+          type: string
+          maxLength: 38
+          example: 94673 Charenton-Le-Pont
+        sender_country_code:
+          $ref: '#/components/schemas/country_code'
+
+    document_response:
+      description: Document
+      type: object
+      properties:
+        id:
+          description: id du document
+          type: string
+          format: uuid
+          example: "4cd97ac3-0e18-46db-897b-906365cd60a9"
+        name:
+          description: Nom du fichier
+          type: string
+          example: template_facture_standard
+        hcode:
+          description: Empreinte MD5 du document
+          type: string
+          example: "15fc6eed5ed024bfb86c4130f998dde437f528ee"
+        priority:
+          description: Priorité donnée dans la règle d'analyse
+          type: integer
+          example: 1
+        pages_count:
+          description: Nombre de pages
+          type: integer
+          example: 3
+        size:
+          description: Poids du document en octets
+          type: integer
+          example: 139071
+        status:
+          $ref: '#/components/schemas/document_status'
+        converted_size:
+          type: integer
+          description: Poids du document convertis en octets
+          example: 139071
+        type:
+          description: Permet de connaître la limite d'un type de document lors de l'envoi
+          type: string
+          enum:
+            - MAIN_DOCUMENT
+            - ANNEX
+        creation_date:
+          $ref: '#/components/schemas/creation_date'
+        modification_date:
+          $ref: '#/components/schemas/modification_date'
+        shrink:
+          description: Choix du redimensionnement de mon document
+          type: boolean
+    document_status:
+      type: string
+      description: "Statut du document.
+
+        <table>
+          <tr>
+            <td>PENDING</td>
+            <td>le document n'a été ni traité, ni rejeté</td>
+          </tr>
+          <tr>
+            <td>PROCESSED</td>
+            <td>le document a été traité</td>
+          </tr>
+          <tr>
+            <td>REJECTED</td>
+            <td>le document n'est pas valide</td>
+          </tr>
+        </table>
+        "
+      enum:
+        - PENDING
+        - PROCESSED
+        - REJECTED
+      example: PROCESSED
+    document_modification:
+      description: Document
+      type: object
+      properties:
+        name:
+          description: Nom du fichier
+          type: string
+          example: template_facture_standard
+        priority:
+          description: Priorité donnée dans la règle d'analyse
+          type: integer
+          example: 1
+        type:
+          description: Permet de connaître la limite d'un type de document lors de l'envoi
+          type: string
+          enum:
+            - MAIN_DOCUMENT
+            - ANNEX
+
+    invoice_mail_options:
+      description: Options Courrier pour l'envoi
+      type: object
+      required:
+        - color_printing
+        - duplex_printing
+        - optional_address_sheet
+        - archiving_duration
+      properties:
+        archiving_duration:
+          type: integer
+          description: Durée d'archivage optionnelle pour envoi papier (en années)
+          enum:
+            - 0
+            - 11
+          default: 0
+          example: 0
+        color_printing:
+          $ref: '#/components/schemas/color_printing'
+        duplex_printing:
+          $ref: '#/components/schemas/duplex_printing'
+        envelope_windows_type:
+          $ref: '#/components/schemas/envelope_windows_type'
+        notification_treat_undelivered_mail:
+          $ref: '#/components/schemas/notification_treat_undelivered_mail'
+        optional_address_sheet:
+          $ref: '#/components/schemas/optional_address_sheet'
+        postage_type:
+          $ref: '#/components/schemas/postage_type_mail'
+        print_sender_address:
+          $ref: '#/components/schemas/print_sender_address'
+        return_envelope:
+          $ref: '#/components/schemas/return_envelope'
+        treat_undelivered_mail:
+          $ref: '#/components/schemas/treat_undelivered_mail'
+        shrink:
+          description: Redimensionnement des marges des documents pour facture envoi papier
+          type: boolean
+          example: false
+          default: false
+
+    invoice_email_options:
+      type: object
+      description: Options E-mail pour l'envoi
+      required:
+        - recipient_notification_from
+        - recipient_notification_reply_to
+      properties:
+        recipient_notification_template:
+          type: string
+          format: uuid
+          description: Identifiant du template d'e-mail
+          example: 59e081d8-20ee-4336-9a1b-fd37ad9a76c1
+        recipient_notification_from:
+          type: string
+          maxLength: 50
+          description: Nom libre associé à l’adresse email de l’émetteur des factures dématérialisées
+          example: "Jean DUPONT"
+        recipient_notification_reply_to:
+          type: string
+          maxLength: 80
+          description: Adresse email de retour
+          example: "jean.dupont@gmail.com"
+
+    invoice_portal_options:
+      type: object
+      description: Options Portail pour l'envoi
+      required:
+        - recipient_notification_from
+        - recipient_notification_reply_to
+      properties:
+        recipient_notification_template:
+          type: string
+          format: uuid
+          description: Identifiant du template de portail
+          example: 59e081d8-20ee-4336-9a1b-fd37ad9a76c1
+        recipient_notification_from:
+          type: string
+          maxLength: 50
+          description: Nom libre associé à l’adresse email de l’émetteur des factures dématérialisées
+          example: "Jean DUPONT"
+        recipient_notification_reply_to:
+          type: string
+          maxLength: 80
+          description: Adresse email de retour
+          example: "jean.dupont@gmail.com"
+        send_attachment:
+          type: boolean
+          description: Envoyer attachment
+          default: false
+          example: false
+
+    notification_type:
+      type: string
+      description: ALL_MAILEVA toutes les notification de Maileva, ALL_LAPOSTE toutes les notifications de La Poste
+      enum:
+        - ALL_MAILEVA
+        - ALL_LAPOSTE
+
+    reject_on_failed_grouping_recipient:
+      type: boolean
+      description: Si false on envoie les plis non regroupés partiellement valides à l’api produit, si c’est true on envoie aucun pli non regroupé si il y a un pli non valide donc on le retrouve pas dans l’api produit
+      example: false
+      default: false
+
+    sending_rule_status:
+      description: statut de la règle. ENABLED=règle active, DISABLED=règle désactivée, LOCKED=règle vérouillée, DRAFT=règle brouillon, TO_VALIDATE=règle à valider, REFUSED=règle refusée par le client
+      type: string
+      enum:
+        - "DRAFT"
+        - "ENABLED"
+        - "DISABLED"
+        - "TO_VALIDATE"
+        - "LOCKED"
+        - "REFUSED"
+    product:
+      description: Type de produit. MAIL=courrier simple, REGISTERED_MAIL=courrier recommandé, INVOICE=facture, REGISTERED_MAIL_V4=Maileva courrier recommandé, ELECTRONIC_QUALIFIED_REGISTERED_MAIL=Lettres Recommandées Electroniques
+      type: string
+      enum:
+        - MAIL
+        - REGISTERED_MAIL
+        - INVOICE
+        - ELECTRONIC_QUALIFIED_REGISTERED_MAIL
+        - REGISTERED_MAIL_V4
+    sender_tax_number:
+      type: string
+      maxLength: 13
+      description: Numéro de TVA intra-communautaire de l’émetteur
+      example: "FR89493376008"
+    sender_siret:
+      type: string
+      maxLength: 14
+      description: Siret de l’émetteur
+      example: "49337600800030"
+    sender_company_name:
+      type: string
+      maxLength: 255
+      description: Raison sociale de l’émetteur
+      example: "Société DURAND"
+    sender_id:
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      type: string
+      description: Id de l'expéditeur
+    legal_status:
+      enum:
+        - PROFESSIONAL
+        - INDIVIDUAL
+      type: string
+      description: Type de destinataire
+    notification_language:
+      type: string
+      default: FR
+      description: Langue d'envoi des notifications e-mail aux destinataires (valeurs possibles EN pour anglais, NL pour néerlandais et FR pour français)
+      enum:
+        - FR
+        - EN
+        - NL
+    pre_notification:
+      type: boolean
+      description: prénotification au destinataire de l'envoi d'une LREQ
+      example: true
+    additional_sender_name:
+      maxLength: 255
+      minLength: 0
+      type: string
+      description: Nom de l'expediteur défini par le client ajouté après le nom de l'expediteur
+      example: Nom & Prénom pour le compte de Maileva
+    message:
+      maxLength: 450
+      minLength: 0
+      type: string
+      description: Message libre défini par le client transmis aux destinataires lors de l'ouverture de son courrier
+      example: Message personnalisé
+    product_id:
+      description: ID de l'envoi lié au produit concerné
+      type: string
+      format: uuid
+      example: "d5fb0158-4189-4637-859f-ee479f0c8ea8"
+    sending_rule_id:
+      description: ID de la règle d'envoi utilisée
+      type: string
+      format: uuid
+      example: 110e8400-e29b-11d4-a716-446655440000
+    sending_custom_id:
+      type: string
+      maxLength: 36
+      description: Identifiant de l'envoi fourni par le client
+      example: Référence de l'envoi
+
+    sending_mode:
+      type: string
+      description: Mode d'envoi de la facture <br/>
+        <table border="1">
+        <tr bgcolor="lightgrey">
+        <th>Code</th>
+        <th>Description</th>
+        </tr>
+        <tr><td>MAIL</td><td>Par Courrier (Editique)</td></tr>
+        <tr><td>EMAIL</td><td>Par E-mail</td></tr>
+        <tr><td>CHORUS</td><td>Par Chorus Pro</td></tr>
+        <tr><td>PORTAL</td><td>Par portail de réception</td></tr>
+        </table>
+      enum:
+        - MAIL
+        - EMAIL
+        - CHORUS
+        - PORTAL
+
+    return_envelope:
+      type: object
+      description: >-
+        Enveloppe retour. Si l'enveloppe retour est une
+        enveloppe T (postréponse) et si un destinataire n'est pas en France
+        métropolitaine ou dans un DOM, alors le pli partira sans enveloppe
+        T. Cette option ajoute un délai d'un jour de production supplémentaire
+      properties:
+        type:
+          type: string
+          description: >-
+            Type d'enveloppe retour. FRANKING_ENVELOPE : Enveloppe à affranchir, PREPAID_ENVELOPE : Enveloppe T
+          enum:
+            - FRANKING_ENVELOPE
+            - PREPAID_ENVELOPE
+        id:
+          type: string
+          description: Identifiant de l'enveloppe retour
+          format: uuid
+
+    page_background:
+      type: object
+      description: Fonds de page
+      properties:
+        asset_id:
+          type: string
+          description: Identifiant du fichier
+          example: '6dfe84bc-3428-43db-90b5-ff9ac3b68ac2'
+        position:
+          type: string
+          description: Position du fond de page
+          enum:
+            - FIRST_PAGE
+            - LAST_PAGE
+            - ALL_PAGES
+          example: ALL_PAGES
+
+    page_insertion:
+      type: object
+      description: Page à insérer
+      properties:
+        asset_id:
+          type: string
+          description: Identifiant du fichier
+          example: '6dfe84bc-3428-43db-90b5-ff9ac3b68ad6'
+        position:
+          type: string
+          description: Position de la page à insérer
+          enum:
+            - AFTER_FIRST_PAGE
+            - AFTER_LAST_PAGE
+            - AFTER_ALL_PAGES
+          example: AFTER_ALL_PAGES
+
+    contract_option_public:
+      description: Détail d'un contract_option
+      type: object
+      properties:
+        id:
+          type: string
+          description: id de la ressource contract_option
+          readOnly: true
+        contract_max_sending_rules:
+          type: integer
+          description: Nombre de règles maximum du contrat
+          example: 50
+        max_sending_rules:
+          type: integer
+          description: Nombre de règles maximum autorisé (peut être supérieur à la valeur dans le contrat)
+          example: 50
+        sending_rules_count:
+          type: integer
+          description: Nombre de règles activées
+          example: 10
+          readOnly: true
+
+  parameters:
+    document_id:
+      description: Identifiant du document
+      name: document_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+    paging_start_index:
+      description: Le premier élément à retourner
+      name: start_index
+      in: query
+      required: false
+      schema:
+        type: number
+        default: 1
+        minimum: 1
+    paging_count:
+      description: Le nombre d'élément à retourner
+      name: count
+      in: query
+      required: false
+      schema:
+        type: number
+        default: 50
+        minimum: 1
+        maximum: 500
+    recipient_id:
+      description: Identifiant du destinataire
+      name: recipient_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+    sending_id:
+      description: Identifiant d'un envoi
+      name: sending_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+    preview_id:
+      description: L'ID du BAT
+      name: preview_id
+      in: path
+      required: true
+      schema:
+        maxLength: 256
+        type: string
+        format: uuid
+    picture_request_id:
+      description: L'ID de la demande du BAT
+      name: picture_request_id
+      in: path
+      required: true
+      schema:
+        maxLength: 256
+        type: string
+        format: uuid
+    picture_id:
+      description: L'ID de l'image du BAT
+      name: picture_id
+      in: path
+      required: true
+      schema:
+        maxLength: 256
+        type: string
+        format: uuid
+    file_id:
+      description: L'ID du flux
+      name: file_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    extraction_id:
+      description: L'ID de l'extraction
+      name: extraction_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    split_id:
+      description: L'ID de la rupture
+      name: split_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    split_on_changing_content_id:
+      description: L'ID du découpage par contenu changeant
+      name: split_on_changing_content_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    split_on_content_found_id:
+      description: L'ID du découpage par contenu trouvé
+      name: split_on_content_found_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    extraction_rule_id:
+      description: L'ID de la règle d'extraction
+      name: extraction_rule_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    extraction_definition_id:
+      description: L'ID de la zone d'extraction
+      name: extraction_definition_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    simulation_id:
+      description: L'ID de la simulation
+      name: simulation_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    split_rule_id:
+      description: L'ID de la règle de découpage
+      name: split_rule_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    sending_rule_id:
+      description: L'ID de la règle d'envoi
+      name: sending_rule_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    analysis_rule_id:
+      description: L'ID du document attendu
+      name: analysis_rule_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    document_example_id:
+      description: L'ID de l'exemple du document
+      name: document_example_id
+      in: path
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        format: uuid
+    page_number:
+      description: Numéro de page pour le document PDF
+      name: page_number
+      in: path
+      required: true
+      schema:
+        maxLength: 256
+        type: string
+        format: uuid
+    final_proof_id:
+      description: L'ID du BAT
+      name: final_proof_id
+      in: path
+      required: true
+      schema:
+        maxLength: 256
+        type: string
+        format: uuid
+    paging_sort:
+      description: Permet de trier les règles d'extraction par un champs par ordre croissant (asc)
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+    paging_desc:
+      description: Permet de trier les règles d'extraction par un champs par ordre décroissant (desc)
+      name: desc
+      in: query
+      required: false
+      schema:
+        type: string
+    paging_filters:
+      description: Permet de filtrer tous les champs
+      name: filters
+      in: query
+      required: true
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Nom de la règle d'extraction
+            example: "Extraction name"
+    contract_option_id:
+      description: id de la ressource
+      name: contract_option_id
+      in: path
+      required: true
+      schema:
+        type: string

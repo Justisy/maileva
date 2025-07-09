@@ -1,0 +1,7 @@
+node_modules/
+openapi/
+scripts/
+src/
+
+tsconfig.json
+yarn.lock

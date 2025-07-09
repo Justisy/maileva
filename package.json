@@ -1,0 +1,35 @@
+{
+  "name": "maileva",
+  "version": "0.0.1",
+  "license": "MIT",
+  "author": "Justisy",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "yarn scripts:build && yarn build:types",
+    "build:types": "tsc",
+    "test": "vitest",
+    "test:watch": "yarn test --watch",
+    "scripts:build": "tsx ./scripts/build",
+    "scripts:generate": "tsx ./scripts/generate",
+    "scripts:schemas": "tsx ./scripts/schemas"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.10",
+    "dotenv": "17.1.0",
+    "change-case": "5.4.4",
+    "cheerio": "1.1.0",
+    "esbuild": "0.25.5",
+    "jwt-decode": "4.0.0",
+    "openapi-typescript": "7.8.0",
+    "prettier": "3.6.2",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4",
+    "yaml": "2.8.0"
+  }
+}

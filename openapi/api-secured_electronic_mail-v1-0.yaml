@@ -1,0 +1,1663 @@
+openapi: 3.0.1
+servers:
+  - url: https://api.maileva.com/secured_electronic_mail/v1
+    description: Production
+  - url: https://api.sandbox.maileva.net/secured_electronic_mail/v1
+    description: Sandbox
+
+info:
+  version: '1.0'
+  title: Maileva / Envoi recommandé électronique simple - ERE simple
+  description: >-
+    API pour créer des envois recommandés électroniques simples.
+
+
+    **Qu'est ce que l'ERE simple?**
+
+
+    C'est un envoi 100% électronique de l'envoi à la réception, régit par
+    l'article 43.1 du règlement eIDAS. Il peut être utilisé pour tous les cas
+    d'usage où la loi n'impose pas le recours à la lettre recommandée avec
+    accusé de réception.
+
+
+    L'envoi recommandé électronique simple ne necessite pas une authentification
+    renforcée de l'expéditeur pour réaliser son envoi ni celle du destinataire
+    pour le réceptionner.  Le recueil du consentement n'est également pas
+    obligatoire.
+
+
+    Après la soumission d'un ERE simple, l'expéditeur reçoit instantanément
+    **une preuve de dépôt et d'envoi** attestant que l'envoi a bien été déposé
+    dans la boite e-mail du destinataire.  Ensuite, selon l'action du
+    destinataire sur celui ci, il reçoit soit:
+
+    - **Une preuve de réception**: le destinataire a bien ouvert son courrier 
+
+    - **Une preuve de refus**: le destinataire refuse son courrier
+
+    - **Une preuve de négligeance**: le destinataire n'a fait aucune action sur
+    son courrier durant les 15 jours dont il dispose. 
+
+    - **Une preuve de non destribution**: Le courrier n'a pas pu être remis au
+    destinataire (Adresse e-mail invalide)
+
+
+    **Les avantages de l'ERE simple:**
+
+    - Délais d'acheminement supprimés,
+
+    - Preuves instantanées et 100% dématerialisées,
+
+    - Horodatage qualifié
+
+    - Disponibilité 24h/24 et 7j/7
+
+    - Ne nécessite ni l'identification de l'expéditeur ni celle du destinataire
+
+
+    Cette API permet de:
+
+     - Créer un envoi,
+     - Ajouter des documents et des destinataires,
+     - Soumettre l'envoi.
+
+      Pour pouvoir réaliser des envois recommandés électroniques simples, il est nécessaire de paramétrer son compte expéditeur en passant par l'API  <a href="https://www.maileva.com/catalogue-api/expediteur-denvois-electroniques/"> electronic_mail_emitter</a>
+
+security:
+  - bearerAuth: []
+  - oAuth2PasswordProduction: []
+  - oAuth2PasswordSandbox: []
+
+paths:
+  /sendings:
+    post:
+      tags:
+        - Envoi
+      summary: Création d'un envoi
+      description: Permet de créer un envoi. Avant soumission, l'envoi est au statut DRAFT"
+      operationId: createSender
+      requestBody:
+        description: Nouvel envoi
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendingCreation'
+        required: true
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: url resource
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendingResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    get:
+      tags:
+        - Envoi
+      summary: Liste des envois
+      description: >-
+        Permet d'obtenir la liste des envois. Il est possible de rajouter un
+        attribut dans les paramètres afin de filtrer la liste des envois. La
+        liste des envois peut être paginée. Par défaut, la pagination est de 50
+        résultats. Elle peut être modifiée pour atteindre jusqu'à 500 résultats.
+      operationId: findSendings
+      parameters:
+        - name: start_index
+          in: query
+          description: Le premier élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          description: Le nombre d'élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 50
+        - name: q
+          description: q description
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendingsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden*
+  /sendings/{sending_id}:
+    get:
+      tags:
+        - Envoi
+      summary: Détail d'un envoi
+      description: Permet de récupérer un envoi à partir de son identifiant.
+      operationId: getSending
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendingResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+    patch:
+      tags:
+        - Envoi
+      summary: Modification des options d'envoi
+      description: >-
+        Permet de modifier les options liées à l'envoi d'un ERE simple. Ce
+        dernier doit être en DRAFT
+      operationId: updateSender
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendingUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendingResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    delete:
+      tags:
+        - Envoi
+      summary: Suppression d'un envoi
+      description: Permet de supprimer un envoi. Ce dernier doit être en DRAFT.
+      operationId: deleteSender
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  /sendings/{sending_id}/submit:
+    post:
+      tags:
+        - Envoi
+      summary: Finalisation d'un envoi
+      description: >-
+        Permet de valider l'envoi et de déclencher ainsi la demande de
+        production.
+      operationId: submitSending
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Accepted
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+  /sendings/{sending_id}/documents:
+    post:
+      tags:
+        - Documents
+      summary: Ajout d'un document à l'envoi.
+      description: >-
+        Permet d'ajouter un document à l'envoi. Tous les types de documents sont
+        autorisés. Les documents ajoutés pour un envoi ne doivent pas dépasser
+        256Mo au total. Le nombre total de documents est illimité. Le document
+        doit être transmis en mutipart ainsi que la metadata. La metadata est
+        constituée de name (permet de donner un nom au fichier) et de hcode 
+        (s'il est présent, cela permet de demander la vérification du md5).
+      operationId: createDocument
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - document
+                - metadata
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: binaire du document en multipart
+                metadata:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: Nom du document
+                      example: template_facture_standard
+                    hcode:
+                      type: string
+                      description: >-
+                        Empreinte MD5 du document. Si ce champ est présent alors
+                        une vérification sera faite.
+                      example: c628e5f1d622d72a9d4557888c14bcb9
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: url resource
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    get:
+      tags:
+        - Documents
+      summary: Liste des documents d'un envoi
+      description: >-
+        Permet de récupérer la liste des documents associés à l'envoi. La liste
+        des documents d'un envoi peut être paginée. Par défaut et au maximum, la
+        pagination est de 30 résultats.
+      operationId: getDocuments
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: start_index
+          in: query
+          description: Le premier élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          description: Le nombre d'élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 30
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+  /sendings/{sending_id}/recipients:
+    post:
+      tags:
+        - Destinataires
+      summary: Ajout d'un destinataire à l'envoi
+      description: >-
+        Permet d'ajouter un destinataire à l'envoi. Le nombre de destinataires
+        est limité à 30 000. Si le destinataire est un particulier, le nom et
+        prénom sont obligatoires. Si le destinataire est un professionnel, le
+        nom de la société est obligatoire et le nom et prénom sont facultatifs.
+      operationId: createDocument_2
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Nouveau destinataire
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipientCreation'
+        required: true
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: url resource
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_draft_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    get:
+      tags:
+        - Destinataires
+      summary: Liste des destinataires d'un envoi
+      description: >-
+        Permet de récupérer la liste des destinataires d'un envoi. Cette liste
+        peut être paginée. Par défaut, la pagination est de 50 résultats. Elle
+        peut atteindre 500 au maximum.
+      operationId: getRecipients
+      parameters:
+        - name: sending_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start_index
+          in: query
+          description: Le premier élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 1
+        - name: count
+          in: query
+          description: Le nombre d'élément à retourner
+          required: false
+          schema:
+            minimum: 1
+            type: integer
+            format: int32
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: desc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipientsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    delete:
+      tags:
+        - Destinataires
+      summary: Suppression de tous les destinataires
+      description: Permet de supprimer tous les destinataires d'un envoi.
+      operationId: deleteAllRecipients
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /sendings/{sending_id}/recipients/imports:
+    post:
+      tags:
+        - Destinataires
+      summary: Ajout d'un ou plusieurs destinataires à un envoi
+      description: |-
+
+        Permet d'ajouter un ou plusieurs destinataires à un envoi. 
+        Le nombre de destinataires à l'importation est limité à 30 000.
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/import_recipients'
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipients_import_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /sendings/{sending_id}/recipients/{recipient_id}:
+    get:
+      tags:
+        - Destinataires
+      summary: Détail d'un destinataire
+      description: Permet de lister les données d'un destinataire d'un envoi.
+      operationId: getRecipient
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipientResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+    delete:
+      tags:
+        - Destinataires
+      summary: Suppression d'un destinataire
+      description: Permet de supprimer un destinataire d'un envoi.
+      operationId: deleteRecipient
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+    patch:
+      tags:
+        - Destinataires
+      summary: Modification partielle d'un destinataire
+      description: Permet de modifier partiellement un destinataire
+      operationId: updateRecipient
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipientUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/recipient_draft_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  /sendings/{sending_id}/recipients/{recipient_id}/download_deposit_proof:
+    get:
+      tags:
+        - Destinataires
+      summary: Téléchargement de la preuve de dépôt d'un destinataire
+      description: Permet de télécharger la preuve de dépôt d'un destinataire
+      operationId: downloadDepositProof
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/pdf:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /sendings/{sending_id}/recipients/{recipient_id}/download_delivery_proof:
+    get:
+      tags:
+        - Destinataires
+      summary: Téléchargement du justificatif de réception d'un destinataire
+      description: >-
+        Permet de télécharger au format PDF le justificatif de réception du
+        destinataire (accusé de réception, refus ou non réclamation).
+      operationId: downloadDeliveryProof
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/pdf:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /sendings/{sending_id}/recipients/{recipient_id}/download_package:
+    get:
+      tags:
+        - Destinataires
+      summary: Téléchargement de l'ensemble des documents d'un destinataire
+      description: Permet de télécharger l'ensemble des documents relatifs à un destinataire (document envoyé, preuve de dépôt et justificatif de réception).
+      operationId: downloadPackage
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: recipient_id
+          in: path
+          description: Identifiant du destinataire
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/zip:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+  /sendings/{sending_id}/documents/{document_id}:
+    get:
+      tags:
+        - Documents
+      summary: Détail d'un document
+      description: Permet de récupérer le détail d'un document utilisé lors de l'envoi.
+      operationId: getDocument
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: document_id
+          in: path
+          description: Identifiant du document
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+    delete:
+      tags:
+        - Documents
+      summary: Suppression d'un document
+      description: Permet de supprimer un document d'un envoi.
+      operationId: getDocument_1
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: document_id
+          in: path
+          description: Identifiant du document
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+  /sendings/{sending_id}/documents/{document_id}/download:
+    get:
+      tags:
+        - Documents
+      summary: Téléchargement d'un document
+      description: Permet de télécharger un document d'un envoi
+      operationId: downloadattachments
+      parameters:
+        - name: sending_id
+          in: path
+          description: Identifiant de l'envoi
+          required: true
+          schema:
+            type: string
+        - name: document_id
+          in: path
+          description: Identifiant du document
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/pdf:
+              schema:
+                type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsDto'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      description: "Indiquez le token directement obtenu via la méthode suivante :
+        
+        curl -X POST 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token' \
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+        -u 'my_client_id:my_client_secret' \
+        -d 'grant_type=password&username=my_user_login&password=my_user_password' \
+        -v"
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oAuth2PasswordProduction:
+      description: authentification oAuth2 en mode password sur l'environnment de production
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: CRUD on ressources
+    oAuth2PasswordSandbox:
+      description: authentification oAuth2 en mode password sur l'environnment Sandbox
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: 'https://connexion.sandbox.maileva.net/auth/realms/services/protocol/openid-connect/token'
+          scopes:
+            all: CRUD on ressources
+
+  schemas:
+    ErrorDto:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    ErrorsDto:
+      type: array
+      items:
+        $ref: '#/components/schemas/ErrorDto'
+    DocumentResponse:
+      type: object
+      properties:
+        id:
+          description: id du document
+          type: string
+          format: uuid
+          example: 4cd97ac3-0e18-46db-897b-906365cd60a9
+        name:
+          description: Nom du fichier
+          type: string
+          example: template_facture_standard
+        hcode:
+          description: Empreinte MD5 du document
+          type: string
+          example: 15fc6eed5ed024bfb86c4130f998dde437f528ee
+        size:
+          description: Poids du document en octets
+          type: integer
+          example: 139071
+        creation_date:
+          $ref: '#/components/schemas/creation_date'
+        modification_date:
+          $ref: '#/components/schemas/modification_date'
+
+    DocumentsResponse:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentResponse'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    Paging:
+      type: object
+      properties:
+        prev:
+          type: string
+        next:
+          type: string
+        total_results:
+          type: integer
+          format: int64
+    delivery_proof:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date de la preuve
+          format: date-time
+          example: '2018-03-14T07:21:40.757Z'
+        type:
+          type: string
+          description: Type de la preuve
+          example: DEPOSIT_PROOF
+          enum:
+            - REFUSAL_PROOF
+            - UNDELIVERED_PROOF
+            - ACKNOWLEDGMENT_OF_RECEIPT
+            - NOT_CLAIMED_PROOF
+        href:
+          type: string
+          description: Lien de téléchargement de la preuve
+      description: Preuve de dépôt
+    deposit_proof:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date de création de la preuve
+          format: date-time
+          example: '2018-03-14T07:21:40.757Z'
+        href:
+          type: string
+          description: Lien de téléchargement de la preuve
+      description: Preuve de dépôt
+
+    recipient_draft_response:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identifiant du destinataire
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        custom_id:
+          $ref: '#/components/schemas/recipient_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        legal_status:
+          $ref: '#/components/schemas/legal_status'
+        first_name:
+          $ref: '#/components/schemas/first_name'
+        last_name:
+          $ref: '#/components/schemas/last_name'
+        email:
+          $ref: '#/components/schemas/email'
+        company:
+          $ref: '#/components/schemas/company'
+        status:
+          $ref: '#/components/schemas/recipient_status'
+    recipient_status:
+      description: |-
+        Statut de production du destinataire : <table border="1"> <tr><td>DRAFT</td>
+          <td>Le destinataire est au statut brouillon, non validé par l’utilisateur</td></tr>
+        <tr><td>PENDING</td>
+          <td>Le destinataire est en attente de validation</td></tr>
+        <tr><td>ACCEPTED</td>
+          <td>Le destinataire est en attente de dépôt</td></tr>
+        <tr><td>BLOCKED</td>
+          <td>L'envoi auquel est rattaché le destinataire est bloqué pour dépassement de l'encours. </td></tr> 
+        <tr><td>PROCESSED</td>
+          <td>Le dépôt pour le destinataire est réussi</td></tr>
+        <tr><td>REJECTED</td>
+          <td>Le dépôt pour le destinataire a échoué</td></tr>
+        <tr><td>SENDING_REJECTED</td> <td>l'envoi auquel est rattaché le destinataire est rejeté, par conséquent le destinataire également</td></tr> </table>
+      type: string
+      example: DRAFT
+      enum:
+        - DRAFT
+        - PENDING
+        - BLOCKED
+        - SENDING_REJECTED
+        - ACCEPTED
+        - REJECTED
+        - PROCESSED
+    recipient_delivery_status:
+      description: >-
+        Statut de distribution du destinataire. : <table border="1">
+        <tr><td>DELIVERING</td>
+          <td>L'envoi du destinataire est en cours de distribution. (EV)</td></tr>
+        <tr><td>DELIVERED</td>
+          <td>Le destinataire a reçu et ouvert son courrier.</td></tr>
+        <tr><td>UNDELIVERED</td>
+          <td>L'envoi du destinataire n'a pas pu être distribué, refusé ou non réclamé</td></tr>
+        </table>
+      type: string
+      example: UNDELIVERED
+      enum:
+        - DELIVERING
+        - DELIVERED
+        - UNDELIVERED
+    recipient_delivery_statuses:
+      description: Historique des statuts de distribution
+      type: array
+      items:
+        properties:
+          date:
+            type: string
+            format: date-time
+            description: Date du statut
+          code:
+            type: string
+            example: UNDELIVERED
+            description: Code du statut
+          detail:
+            $ref: '#/components/schemas/delivery_detail'
+    status_detail:
+      type: string
+      example: INVALID_DATA
+      description: Detail du statut de production
+    delivery_detail:
+      type: string
+      example: BOUNCED
+      description: Detail du statut de distribution
+      enum:
+        - BOUNCED
+        - NOT_CLAIMED
+        - REFUSED
+    RecipientResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identifiant du destinataire
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        custom_id:
+          $ref: '#/components/schemas/recipient_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        legal_status:
+          $ref: '#/components/schemas/legal_status'
+        first_name:
+          $ref: '#/components/schemas/first_name'
+        last_name:
+          $ref: '#/components/schemas/last_name'
+        email:
+          pattern: >-
+            ^[\w]{1,}[\w.+-]{0,}@[\w-]{2,}([.][a-zA-Z]{2,}|[.][\w-]{2,}[.][a-zA-Z]{2,})+$
+          type: string
+          description: Adresse email du destinataire
+          example: jean.dupont@gmail.com
+        company:
+          $ref: '#/components/schemas/company'
+        status:
+          $ref: '#/components/schemas/recipient_status'
+        status_detail:
+          $ref: '#/components/schemas/status_detail'
+        statuses:
+          description: Statut
+          type: object
+          properties:
+            date:
+              type: string
+              format: date-time
+              description: Date du statut
+            detail:
+              $ref: '#/components/schemas/status_detail'
+            code:
+              type: string
+              description: Code du statut
+        delivery_status:
+          $ref: '#/components/schemas/recipient_delivery_status'
+        delivery_status_detail:
+          $ref: '#/components/schemas/delivery_detail'
+        delivery_statuses:
+          $ref: '#/components/schemas/recipient_delivery_statuses'
+        delivery_proof:
+          $ref: '#/components/schemas/delivery_proof'
+        deposit_proof:
+          $ref: '#/components/schemas/deposit_proof'
+        reference:
+          type: string
+          description: référence maileva du destinataire
+          example: RE24C000000000001
+    RecipientsResponse:
+      type: object
+      properties:
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipientResponse'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    RecipientCreation:
+      required:
+        - email
+        - legal_status
+      type: object
+      properties:
+        custom_id:
+          $ref: '#/components/schemas/recipient_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        legal_status:
+          $ref: '#/components/schemas/legal_status'
+        first_name:
+          maxLength: 50
+          minLength: 1
+          type: string
+          description: Prénom du destinataire
+          example: jean
+        last_name:
+          maxLength: 50
+          minLength: 1
+          type: string
+          description: Nom du destinataire
+          example: Dupont
+        email:
+          $ref: '#/components/schemas/email'
+        company:
+          $ref: '#/components/schemas/company'
+    RecipientUpdate:
+      type: object
+      properties:
+        custom_id:
+          $ref: '#/components/schemas/recipient_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        legal_status:
+          $ref: '#/components/schemas/legal_status'
+        first_name:
+          maxLength: 50
+          minLength: 1
+          type: string
+          description: Prénom du destinataire
+          example: jean
+        last_name:
+          maxLength: 50
+          minLength: 1
+          type: string
+          description: Nom du destinataire
+          example: Dupont
+        email:
+          $ref: '#/components/schemas/email'
+        company:
+          $ref: '#/components/schemas/company'
+
+    RecipientsCounts:
+      type: object
+      properties:
+        draft:
+          description: Nombre de destinataires au statut DARFT
+          type: integer
+          format: int32
+        blocked:
+          description: Nombre de destinataires au statut BLOCKED
+          type: integer
+          format: int32
+        accepted:
+          description: Nombre de destinataires au statut ACCEPTED
+          type: integer
+          format: int32
+        rejected:
+          description: Nombre de destinataires au statut REJECTED
+          type: integer
+          format: int32
+        processed:
+          description: Nombre de destinataires au statut PROCESSED
+          type: integer
+          format: int32
+        sending_rejected:
+          description: Nombre de destinataires au statut SENDING REJECTED
+          type: integer
+          format: int32
+        total:
+          description: Nombre total de destinataires
+          type: integer
+          format: int32
+    SendingResponse:
+      required:
+        - name
+        - sender_id
+      type: object
+      properties:
+        id:
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          type: string
+          description: Id de l'envoi
+          example: 110e8400-e29b-11d4-a716-446655440000
+        sender_id:
+          $ref: '#/components/schemas/sender_id'
+        name:
+          $ref: '#/components/schemas/sending_name'
+        custom_id:
+          $ref: '#/components/schemas/sending_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        notification_language:
+          $ref: '#/components/schemas/notification_language'
+        additional_sender_name:
+          $ref: '#/components/schemas/additional_sender_name'
+        message:
+          $ref: '#/components/schemas/message'
+        status:
+          $ref: '#/components/schemas/sending_status'
+        statuses:
+          description: Historique des statuts de production
+          type: array
+          items:
+            properties:
+              date:
+                type: string
+                format: date-time
+                description: Date du statut
+              code:
+                type: string
+                example: ACCEPTED
+                description: Code du statut
+        status_detail:
+          description: Détail du statut lorsque celui est REJECTED ou UNDELIVRED
+          type: string
+#          example: Bounced, Refused, Not claimed
+        creation_date:
+          $ref: '#/components/schemas/creation_date'
+        modification_date:
+          $ref: '#/components/schemas/modification_date'
+        submission_date:
+          $ref: '#/components/schemas/submission_date'
+        processed_date:
+          $ref: '#/components/schemas/processed_date'
+        recipients_counts:
+          $ref: '#/components/schemas/RecipientsCounts'
+        documents_count:
+          description: Nombre de documents
+          type: integer
+          example: 1
+        documents_size:
+          description: Poids total des documents (en octets)
+          type: integer
+          example: 1032356
+    SendingsResponse:
+      type: object
+      properties:
+        sendings:
+          type: array
+          items:
+            $ref: '#/components/schemas/SendingResponse'
+        paging:
+          $ref: '#/components/schemas/Paging'
+    SendingCreation:
+      required:
+        - name
+        - sender_id
+      type: object
+      properties:
+        sender_id:
+          $ref: '#/components/schemas/sender_id'
+        name:
+          $ref: '#/components/schemas/sending_name'
+        custom_id:
+          $ref: '#/components/schemas/sending_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        notification_language:
+          $ref: '#/components/schemas/notification_language'
+        additional_sender_name:
+          $ref: '#/components/schemas/additional_sender_name'
+        message:
+          $ref: '#/components/schemas/message'
+    SendingUpdate:
+      type: object
+      properties:
+        sender_id:
+          $ref: '#/components/schemas/sender_id'
+        name:
+          $ref: '#/components/schemas/sending_name'
+        custom_id:
+          $ref: '#/components/schemas/sending_custom_id'
+        custom_data:
+          $ref: '#/components/schemas/custom_data'
+        notification_language:
+          $ref: '#/components/schemas/notification_language'
+        additional_sender_name:
+          $ref: '#/components/schemas/additional_sender_name'
+        message:
+          $ref: '#/components/schemas/message'
+
+    import_recipients:
+      type: object
+      description: L'import des destinataires
+      properties:
+        addresses_import_id:
+          type: string
+        import_recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipientCreation'
+    recipients_import_response:
+      type: object
+      required:
+        - rejected_import
+        - accepted_import
+      description: Les destinataires d'un envoi
+      properties:
+        accepted_import:
+          type: array
+          items:
+            $ref: '#/components/schemas/accepted_import'
+        rejected_import:
+          type: array
+          items:
+            $ref: '#/components/schemas/rejected_import'
+    accepted_import:
+      type: object
+      properties:
+        correlation_id:
+          type: string
+          maxLength: 32
+          description: Identifiant du destinataire fourni par le client
+          example: 4f89b0f7-30fb-47f5-8be6-111111111111
+        id:
+          type: string
+          maxLength: 32
+          description: Identifiant du destinataire généré par api
+          example: 6dfe84bc-3428-43db-90b5-ff9ac3b68ac2
+    rejected_import:
+      allOf:
+        - $ref: '#/components/schemas/RecipientCreation'
+        - type: object
+          properties:
+            correlation_id:
+              type: string
+              maxLength: 32
+              description: Identifiant du destinataire fourni par le client
+              example: 4f89b0f7-30fb-47f5-8be6-111111111111
+            errors:
+              type: array
+              items:
+                $ref: '#/components/schemas/ErrorsDto'
+
+    sender_id:
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      type: string
+      format: uuid
+      description: Id de l'expéditeur
+    sending_name:
+      maxLength: 256
+      minLength: 1
+      type: string
+      description: Nom de l'envoi
+      example: Résiliation d'un abonnement téléphonique
+    sending_custom_id:
+      maxLength: 36
+      minLength: 0
+      type: string
+      description: Identifiant de l'envoi défini par le client
+    custom_data:
+      maxLength: 255
+      minLength: 0
+      type: string
+      description: Information libre fournie par le client
+      example: ref_dossier
+    recipient_custom_id:
+      type: string
+      description: Identifiant du destinataire fourni par le client
+      example: custom
+    legal_status:
+      enum:
+        - PROFESSIONAL
+        - INDIVIDUAL
+      type: string
+      description: Type de destinataire
+    first_name:
+      type: string
+      description: Prénom du destinataire
+      example: jean
+    last_name:
+      type: string
+      description: Nom du destinataire
+      example: Dupont
+    email:
+      pattern: >-
+        ^[\w]{1,}[\w.+-]{0,}@[\w-]{2,}([.][a-zA-Z]{2,}|[.][\w-]{2,}[.][a-zA-Z]{2,})+$
+      type: string
+      description: Adresse email du destinataire
+      example: jean.dupont@gmail.com
+    company:
+      type: string
+      description: Société du destinataire
+    notification_language:
+      type: string
+      default: FR
+      description: >-
+        Langue d'envoi des notifications e-mail aux destinataires (valeurs
+        possibles EN pour anglais, NL pour néerlandais et FR pour français)
+      enum:
+        - FR
+        - EN
+        - NL
+    additional_sender_name:
+      maxLength: 255
+      minLength: 0
+      type: string
+      description: >-
+        Nom de l'expediteur défini par le client ajouté après le nom de
+        l'expediteur
+      example: Nom & Prénom pour le compte de Maileva
+    message:
+      maxLength: 450
+      minLength: 0
+      type: string
+      description: >-
+        Message libre défini par le client transmis aux destinataires lors de
+        l'ouverture de son courrier
+      example: Message personnalisé
+    sending_status:
+      type: string
+      description: >-
+        Statut d'un envoi : <table border="1"> <tr><td>DRAFT</td>
+          <td>L'envoi est à l'état brouillon, non soumis par l’utilisateur</td></tr>
+        <tr><td>PENDING</td>
+          <td>L'envoi est soumis et est en attente de dépôt </td></tr>
+        <tr><td>BLOCKED</td>
+          <td>L'envoi est bloqué pour dépassement de l'envours client autorisé.</td></tr>
+        <tr><td>ACCEPTED</td>
+          <td>Tous les contrôles sont validés, l'envoi va être traité. </td></tr>
+        <tr><td>PROCESSED_WITH_ERRORS</td> <td>Le dépôt est KO pour au moins un
+        destinataire de l'envoi</td></tr>
+          <td></td></tr>
+        <tr><td>PROCESSED</td>
+          <td>Le dépôt est OK pour tous les destinataires de l'envoi</td></tr>
+        <tr><td>REJECTED</td>
+          <td>Le dépôt est KO pour tous les destinataires de l'envoi.</td></tr>
+        </table>
+      enum:
+        - DRAFT
+        - PENDING
+        - BLOCKED
+        - ACCEPTED
+        - PROCESSED
+        - PROCESSED_WITH_ERRORS
+        - REJECTED
+    creation_date:
+      description: Date et heure de création
+      type: string
+      format: date-time
+      example: '2018-03-14T07:21:40.757Z'
+    modification_date:
+      description: Date et heure de modification
+      type: string
+      format: date-time
+      example: '2018-03-14T07:21:40.757Z'
+    submission_date:
+      description: Date et heure de soumission
+      type: string
+      format: date-time
+      example: '2018-03-14T07:21:40.757Z'
+    processed_date:
+      description: Date et heure du dépot du derniere destinataire
+      type: string
+      format: date-time
+      example: '2018-03-14T07:21:40.757Z'

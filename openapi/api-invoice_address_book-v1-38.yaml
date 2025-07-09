@@ -1,0 +1,1389 @@
+openapi: 3.0.0
+servers:
+  - url: https://api.sandbox.maileva.net/invoice_address_book/v1
+    description: Sandbox
+  - url: https://api.maileva.com/invoice_address_book/v1
+    description: Production
+info:
+  version: '1.38'
+  title: API carnet d'adresses Factures
+  description: |
+      API pour gérer les contacts dans le carnet d'adresses du client. Le carnet d'adresses est rattaché au numéro de contrat, plusieurs utilisateurs peuvent donc avoir un carnet d'adresses en commun s'ils partagent le même numéro de contrat.
+
+      Chaque contact représente un destinataire potentiel d'un envoi créé par le client.
+
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      description: >-
+        Indiquez le token directement obtenu via la méthode suivante :
+
+
+        curl -X POST
+        'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token'
+        \
+
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+
+        -u 'my_client_id:my_client_secret' \
+
+        -d
+        'grant_type=password&username=my_user_login&password=my_user_password' \
+
+        -v
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    contact_creation:
+      type: object
+      description: contact
+      required:
+        - identifier
+        - company_name
+        - sending_mode
+      properties:
+        sending_mode:
+          $ref: '#/components/schemas/sending_mode'
+        identifier:
+          type: string
+          maxLength: 38
+          description: Identifiant unique du contact chez le client
+          example: recip1234
+          minLength: 1
+        first_name:
+          type: string
+          description: Prénom du contact
+          example: Jean
+        last_name:
+          type: string
+          description: Nom du contact
+          example: DUPOND
+        email:
+          type: string
+          format: email
+          description: adresse email du contact
+          maxLength: 255
+          example: recip@domain.com
+        department_code:
+          type: string
+          description: Code Service Exécutant
+          maxLength: 110
+          example: PRFPLTF974
+        legal_commitment_number:
+          type: string
+          description: Numéro d’engagement juridique
+          maxLength: 50
+          example: 18OAG0027886
+        company_name:
+          type: string
+          description: Raison sociale du contact
+          maxLength: 255
+          example: Ministère de l'interieur
+          minLength: 1
+        siret:
+          type: string
+          description: SIRET du contact
+          maxLength: 14
+          example: 49337600800030
+        address_line_1:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°1 (Société)
+          example: La Poste
+        address_line_2:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°2 (Civilité, Prénom, Nom)
+          example: Me Eva DUPONT
+        address_line_3:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°3 (Résidence, Bâtiement ...)
+          example: Résidence des Peupliers
+        address_line_4:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°4 (N° et libellé de la voie)
+          example: 33 avenue de Paris
+        address_line_5:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°5 (Lieu dit, BP...)
+          example: BP 356
+        address_line_6:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°6 (Code postal et ville)
+          example: 75000 Paris
+        country_code:
+          $ref: '#/components/schemas/country_code'
+        email_template_id:
+          type: string
+          description: Identifiant du template email associé au contact
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+
+    contact_response:
+      type: object
+      description: contact
+      properties:
+        id:
+          type: string
+          description: Identifiant du contact
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        sending_mode:
+          $ref: '#/components/schemas/sending_mode'
+        identifier:
+          type: string
+          maxLength: 38
+          description: Identifiant unique du contact
+          example: recip1234
+        first_name:
+          type: string
+          description: Prénom du contact
+          example: Jean
+        last_name:
+          type: string
+          description: Nom du contact
+          example: DUPOND
+        email:
+          type: string
+          format: email
+          description: adresse email du contact
+          maxLength: 255
+          example: recip@domain.com
+        department_code:
+          type: string
+          description: Code Service Exécutant
+          maxLength: 110
+          example: PRFPLTF974
+        legal_commitment_number:
+          type: string
+          description: Numéro d’engagement juridique
+          maxLength: 50
+          example: 18OAG0027886
+        company_name:
+          type: string
+          description: Raison sociale du contact
+          maxLength: 255
+          example: Ministère de l'interieur
+        siret:
+          type: string
+          description: SIRET du contact
+          maxLength: 14
+          example: 49337600800030
+        address_line_1:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°1 (Société)
+          example: La Poste
+        address_line_2:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°2 (Civilité, Prénom, Nom)
+          example: Me Eva DUPONT
+        address_line_3:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°3 (Résidence, Bâtiement ...)
+          example: Résidence des Peupliers
+        address_line_4:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°4 (N° et libellé de la voie)
+          example: 33 avenue de Paris
+        address_line_5:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°5 (Lieu dit, BP...)
+          example: BP 356
+        address_line_6:
+          type: string
+          maxLength: 38
+          description: Ligne d'adresse n°6 (Code postal et ville)
+          example: 75000 Paris
+        email_template_id:
+          type: string
+          description: Identifiant du template email associé au contact
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        country_code:
+          $ref: '#/components/schemas/country_code'
+        created_by:
+          $ref: '#/components/schemas/crud_operation'
+        modified_by:
+          $ref: '#/components/schemas/crud_operation'
+    contacts_response_with_pagination:
+      type: object
+      required:
+        - contacts
+        - paging
+      description: les contacts avec pagination
+      properties:
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/contact_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+    contacts_response:
+      type: object
+      description: les contacts
+      properties:
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/contact_response'
+    contact_import:
+      type: object
+      description: le contact à importer
+      properties:
+        id:
+          type: string
+          description: Identifiant du contact à modifier
+          readOnly: true
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+      allOf:
+        - $ref: '#/components/schemas/contact_creation'
+    import_contacts:
+      type: object
+      description: les contacts à importer
+      properties:
+        import_contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/contact_import'
+      required:
+        - import_contacts
+    import_response:
+      type: object
+      description: réponse de l'import de contacts
+      properties:
+        accepted_contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/contact_response'
+        rejected_contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/rejected_contact'
+    import_response_with_validity:
+      type: object
+      description: le contact à importer
+      properties:
+        valid:
+          type: boolean
+          description: Validité du résultat de l'import
+          example: true
+      allOf:
+        - $ref: '#/components/schemas/import_response'
+    rejected_contact:
+      type: object
+      description: contact rejeté lors de l'import
+      properties:
+        contact:
+          $ref: '#/components/schemas/contact_response'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/error_response'
+
+    crud_operation:
+      type: object
+      description: décrire une opération de création ou de modification d'un objet
+      properties:
+        user_login:
+          type: string
+          description: login de l'utilisateur qui a réalisé l'opération
+          example: user_login
+        application_id:
+          type: string
+          description: Identifiant de l'application
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        date:
+          type: string
+          format: datetime
+          description: Date de l'opération
+          example: '2018-03-14T07:21:40.757Z'
+
+    sending_mode:
+      type: string
+      description: |-
+        Mode d'envoi de la facture <br/> <table border="1">
+          <tr bgcolor="lightgrey">
+            <th>Code</th>
+            <th>Description</th>
+          </tr>
+          <tr><td>MAIL</td><td>Par Courrier (Editique)</td></tr>
+          <tr><td>EMAIL</td><td>Par E-mail</td></tr>
+          <tr><td>CHORUS</td><td>Par Chorus Pro</td></tr>
+          <tr><td>PORTAL</td><td>Par Portail de publication</td></tr>
+        </table>
+      enum:
+        - MAIL
+        - EMAIL
+        - CHORUS
+        - PORTAL
+    country_code:
+      type: string
+      description: Code du pays (Code ISO-3166)
+      enum:
+        - AD
+        - AE
+        - AF
+        - AG
+        - AI
+        - AL
+        - AM
+        - AN
+        - AO
+        - AQ
+        - AR
+        - AS
+        - AT
+        - AU
+        - AW
+        - AX
+        - AZ
+        - BA
+        - BB
+        - BD
+        - BE
+        - BF
+        - BG
+        - BH
+        - BI
+        - BJ
+        - BL
+        - BM
+        - BN
+        - BO
+        - BQ
+        - BR
+        - BS
+        - BT
+        - BV
+        - BW
+        - BY
+        - BZ
+        - CA
+        - CC
+        - CD
+        - CF
+        - CG
+        - CH
+        - CI
+        - CK
+        - CL
+        - CM
+        - CN
+        - CO
+        - CR
+        - CS
+        - CU
+        - CV
+        - CW
+        - CX
+        - CY
+        - CZ
+        - DE
+        - DJ
+        - DK
+        - DM
+        - DO
+        - DZ
+        - EC
+        - EE
+        - EG
+        - EH
+        - ER
+        - ES
+        - ET
+        - FI
+        - FJ
+        - FK
+        - FM
+        - FO
+        - FR
+        - GA
+        - GB
+        - GD
+        - GE
+        - GF
+        - GG
+        - GH
+        - GI
+        - GL
+        - GM
+        - GN
+        - GP
+        - GQ
+        - GR
+        - GS
+        - GT
+        - GU
+        - GW
+        - GY
+        - HK
+        - HM
+        - HN
+        - HR
+        - HT
+        - HU
+        - ID
+        - IE
+        - IL
+        - IM
+        - IN
+        - IO
+        - IQ
+        - IR
+        - IS
+        - IT
+        - JE
+        - JM
+        - JO
+        - JP
+        - KE
+        - KG
+        - KH
+        - KI
+        - KM
+        - KN
+        - KP
+        - KR
+        - KW
+        - KY
+        - KZ
+        - LA
+        - LB
+        - LC
+        - LI
+        - LK
+        - LR
+        - LS
+        - LT
+        - LU
+        - LV
+        - LY
+        - MA
+        - MC
+        - MD
+        - ME
+        - MF
+        - MG
+        - MH
+        - MK
+        - ML
+        - MM
+        - MN
+        - MO
+        - MP
+        - MQ
+        - MR
+        - MS
+        - MT
+        - MU
+        - MV
+        - MW
+        - MX
+        - MY
+        - MZ
+        - NA
+        - NC
+        - NE
+        - NF
+        - NG
+        - NI
+        - NL
+        - 'NO'
+        - NP
+        - NR
+        - NU
+        - NZ
+        - OM
+        - PA
+        - PE
+        - PF
+        - PG
+        - PH
+        - PK
+        - PL
+        - PM
+        - PN
+        - PR
+        - PS
+        - PT
+        - PW
+        - PY
+        - QA
+        - RE
+        - RO
+        - RS
+        - RU
+        - RW
+        - SA
+        - SB
+        - SC
+        - SD
+        - SE
+        - SG
+        - SH
+        - SI
+        - SJ
+        - SK
+        - SL
+        - SM
+        - SN
+        - SO
+        - SR
+        - SS
+        - ST
+        - SV
+        - SX
+        - SY
+        - SZ
+        - TC
+        - TD
+        - TF
+        - TG
+        - TH
+        - TJ
+        - TK
+        - TL
+        - TM
+        - TN
+        - TO
+        - TP
+        - TR
+        - TT
+        - TV
+        - TW
+        - TZ
+        - UA
+        - UG
+        - UM
+        - US
+        - UY
+        - UZ
+        - VA
+        - VC
+        - VE
+        - VG
+        - VI
+        - VN
+        - VU
+        - WF
+        - WS
+        - YE
+        - YT
+        - YU
+        - ZA
+        - ZM
+        - ZR
+        - ZW
+      example: FR
+
+    contact_field:
+      description: Attribut mappé
+      type: string
+      example: first_name
+      enum:
+        - id
+        - sending_mode
+        - identifier
+        - first_name
+        - last_name
+        - email
+        - department_code
+        - legal_commitment_number
+        - company_name
+        - siret
+        - address_line_1
+        - address_line_2
+        - address_line_3
+        - address_line_4
+        - address_line_5
+        - address_line_6
+        - country_code
+        - email_template_id
+
+    file_imports:
+      description: Liste des imports par fichier créé par les utilisateurs de l'organisation
+      type: object
+      properties:
+        file_imports:
+          type: array
+          items:
+            $ref: '#/components/schemas/file_import'
+    file_import:
+      description: Description de l'import par fichier
+      type: object
+      required:
+        - id
+        - user_login
+        - creation_date
+        - valid
+      properties:
+        id:
+          type: string
+          description: Identifiant du contact
+          example: c3200456-d63a-4e2f-ad36-3633b2ec6a0e
+        user_login:
+          type: string
+          description: login de l'utilisateur qui a initié l'import
+          example: user_login
+        creation_date:
+          type: string
+          format: datetime
+          description: Date de création de l'import
+          example: '2018-03-14T07:21:40.757Z'
+        valid:
+          type: boolean
+          description: Validité du résultat de l'import
+          example: true
+        result_link:
+          type: string
+          description: Url permettant de confirmer l'envoi (verbe HTTP GET)
+          example: https://api.maileva.com/invoice_address_book/v1/contacts/import_file/c3200456-d63a-4e2f-ad36-3633b2ec6a0e
+        confirm_link:
+          type: string
+          description: Url permettant de confirmer l'envoi (verbe HTTP POST)
+          example: https://api.maileva.com/invoice_address_book/v1/contacts/import_file/c3200456-d63a-4e2f-ad36-3633b2ec6a0e/confirm
+        cancel_link:
+          type: string
+          description: Url permettant de confirmer l'envoi (verbe HTTP POST)
+          example: https://api.maileva.com/invoice_address_book/v1/contacts/import_file/c3200456-d63a-4e2f-ad36-3633b2ec6a0e/cancel
+        revalidate_link:
+          type: string
+          description: Url permettant de confirmer l'envoi (verbe HTTP POST)
+          example: https://api.maileva.com/invoice_address_book/v1/contacts/import_file/c3200456-d63a-4e2f-ad36-3633b2ec6a0e/revalidate
+    errors_response:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/error_response'
+    error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+              <tr><td>ADDRESS_LINE_1_TOO_LONG</td><td>La ligne d'adresse n°1 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_2_TOO_LONG</td><td>La ligne d'adresse n°2 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_3_TOO_LONG</td><td>La ligne d'adresse n°3 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_4_TOO_LONG</td><td>La ligne d'adresse n°4 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_5_TOO_LONG</td><td>La ligne d'adresse n°5 est limitée à 38 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_6_TOO_LONG</td><td>La ligne d'adresse n°6 est limitée à 38 caractères</td></tr>
+              <tr><td>INVALID_ADDRESS_LINE_6</td><td>Le champ address_line_6 doit avoir le format [CODE_POSTAL] [VILLE], avec CODE_POSTAL sur 5 chiffres, lorsque le code pays vaut "FR"</td></tr>
+              <tr><td>COUNTRY_CODE_TOO_LONG</td><td>Le code pays est limité à 2 caractères</td></tr>
+              <tr><td>ADDRESS_LINE_1_OR_ADDRESS_LINE_2_MANDATORY</td><td>La ligne d'adresse n°1 ou la ligne d'adresse n°2 doit être renseignée</td></tr>
+              <tr><td>ADDRESS_LINE_6_MANDATORY</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>COUNTRY_CODE_MANDATORY</td><td>La ligne d'adresse n°6 doit être renseignée</td></tr>
+              <tr><td>INVALID_COUNTRY_CODE</td><td>Le code pays n'est pas autorisé</td></tr>
+              <tr><td>INVALID_EMAIL</td><td>L'email est invalide.</td></tr>
+              <tr><td>INVALID_TEMPLATE_ID</td><td>L'identifiant du template email est invalide.</td></tr>
+              <tr><td>EMAIL_MANDATORY</td><td>L'email est obligatoire.</td></tr>
+              <tr><td>EMAIL_TEMPLATE_NOT_FOUND</td><td>Le template email n'a pas été trouvé en utilisant l'identifiant fourni.</td></tr>
+              <tr><td>SIRET_MANDATORY</td><td>Le siret est obligatoire.</td></tr>
+              <tr><td>IDENTIFIER_MANDATORY</td><td>L'identifiant est obligatoire.</td></tr>
+              <tr><td>COMPANY_NAME_MANDATORY</td><td>La raison sociale est obligatoire.</td></tr>
+              <tr><td>FORBIDDEN_RECIPIENT_SENDING_MODE_WITH_TEMPLATE_USAGE</td><td>Le mode d'envoi du contact n'est pas compatible avec les usages du template email.</td></tr>
+              <tr><td>SENDING_MODE_MANDATORY</td><td>Le mode d'envoi est obligatoire.</td></tr>
+              <tr><td>CONTACT_NOT_FOUND</td><td>Le contact n'a pas été trouvé en utilisant l'identifiant fourni.</td></tr>
+              <tr><td>IDENTIFIER_ALREADY_EXISTS</td><td>L'identifiant doit être unique.</td></tr>
+              <tr><td>IMPORT_IN_PROGRESS</td><tr><tr><td>Un import est en cours, il est nécessaire de le confirmer ou l'annuler pour continuer.</td><tr>
+            </table>
+        message:
+          type: string
+
+    paging_response:
+      description: Pagination des résultats
+      type: object
+      properties:
+        next:
+          description: Page suivante
+          type: string
+        prev:
+          description: Page précédente
+          type: string
+        total_results:
+          description: Nombre de résultats
+          type: integer
+          format: int32
+
+    identifier_list:
+      description: Identifiants uniques de contacts dans le carnet d'adresses
+      type: object
+      properties:
+        identifiers:
+          type: array
+          example: [recipient1, recipient2, recipient3]
+          items:
+            type: string
+            maxLength: 38
+            description: Identifiant unique du contact
+            example: recip1234
+
+    contact_ids_list:
+      description: Identifiants techniques de contacts dans le carnet d'adresses
+      type: object
+      required:
+        - contact_ids
+      properties:
+        contact_ids:
+          type: array
+          example: [5e49c621-8ec9-4195-acf4-2d64d2786de5, b971e98c-5421-43c5-89e0-0eafb0dd7dca, 18c3d724-b0e6-4419-857f-7e2c085b20b8]
+          minItems: 1
+          items:
+            type: string
+            maxLength: 38
+            description: Identifiant technique du contact
+            example: 18c3d724-b0e6-4419-857f-7e2c085b20b8
+
+    import_mapping:
+      type: object
+      required:
+        - mapping
+      properties:
+        delimiter:
+          type: string
+          default: ";"
+        mapping:
+          $ref: '#/components/schemas/mapping_model'
+
+    mapping_model:
+      type: object
+      properties:
+        start_row:
+          type: integer
+          description: Ligne de début (avec ou sans ligne d'entête)
+          default: 0
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/import_mapping_item'
+
+    import_mapping_item:
+      type: object
+      required:
+        - field
+        - column
+      properties:
+        field:
+          $ref: '#/components/schemas/contact_field'
+        column:
+          type: array
+          description: colonne du fichier contenant la valeur de l'attribut
+          items:
+            type: integer
+
+    sort_attribute:
+      type: string
+      enum:
+        - sending_mode
+        - identifier
+        - first_name
+        - last_name
+        - company_name
+        - siret
+        - country_code
+        - email_template_id
+        - created_by.date
+        - created_by.user_login
+        - modified_by.date
+        - modified_by.user_login
+      default: "created_by.date"
+      example: "created_by.date"
+
+
+  parameters:
+    paging_start_index:
+      name: start_index
+      in: query
+      description: Le premier élément à retourner
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1
+        minimum: 1
+    paging_count:
+      name: count
+      in: query
+      description: Le nombre d'élément à retourner
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 50
+        minimum: 1
+        maximum: 500
+    contact_id:
+      name: contact_id
+      in: path
+      description: Identifiant d'un contact
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+    sort:
+      name: sort
+      description: Champs, dans l'ordre, sur lesquels il y a un tri
+      in: query
+      required: false
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/sort_attribute'
+        default: "created_by.date"
+        example: ["created_by.date", "first_name", "last_name"]
+    desc:
+      name: desc
+      description: Champs sur lesquels il y a un tri descendant
+      in: query
+      required: false
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/sort_attribute'
+        default: "created_by.date"
+        example: ["created_by.date", "first_name"]
+    template_id:
+      name: template_id
+      in: path
+      description: Identifiant d'un template email
+      required: true
+      schema:
+        type: string
+        pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        example: d905a65e-aa46-4f37-8480-260c4600c810
+    import_id:
+      name: import_id
+      in: path
+      description: Identifiant d'une opération d'import de contacts
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        example: 1500c1f9-746a-4c13-a964-f3497ae6e78d
+    identifier:
+      name: identifier
+      in: path
+      description: Identifiant unique du contact dans le carnet d'adresses
+      required: true
+      schema:
+        maxLength: 40
+        type: string
+        example: recip1234
+
+    contract_id:
+      in: header
+      description: Identifiant du contrat du client
+      name: contract_id
+      required: true
+      schema:
+        type: string
+        pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+      example: 5DD440B2-197A-4AB7-B742-11CE25C9F2AB
+
+    application_id:
+      in: header
+      description: Identifiant de l'application
+      name: application_id
+      required: true
+      schema:
+        type: string
+        pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+      example: d905a65e-aa46-4f37-8480-260c4600c810
+
+    user_login:
+      in: header
+      description: login de l'utilisateur
+      name: user_login
+      required: true
+      schema:
+        type: string
+      example: testclient
+
+    search:
+      name: q
+      in: query
+      description: Chaine de caractères à rechercher
+      required: false
+      schema:
+        type: string
+
+    #filters
+    sending_mode:
+      name: sending_mode
+      in: query
+      explode: false
+      description : Modes d'envoi
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/sending_mode'
+        example: ["EMAIL", "PORTAL"]
+    identifier_filter:
+      name: identifier
+      in: query
+      description: Identifiant
+      schema:
+        type: string
+        example: recip1234
+    first_name:
+      name: first_name
+      in: query
+      description: Prénom
+      schema:
+        type: string
+        example: Jean
+    last_name:
+      name: last_name
+      in : query
+      description: Nom
+      schema:
+        type: string
+        example: DUPOND
+    company_name:
+      name: company_name
+      in: query
+      description: Raison sociale
+      schema:
+        type: string
+        example: Ministère de l'interieur
+    siret:
+      name: siret
+      in: query
+      description: Siret
+      schema:
+        type: string
+        example: 49337600800030
+    country_code:
+      name: country_code
+      in: query
+      description: Code pays
+      schema:
+        $ref: '#/components/schemas/country_code'
+    email_template_id:
+      name: email_template_id
+      in: query
+      description: Id du template email associé au contact
+      schema:
+        type: string
+        pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        example: d905a65e-aa46-4f37-8480-260c4600c810
+    created_by.start_date:
+      name: created_by.start_date
+      in: header
+      description: Début de l'intervalle de la date de création du contact
+      schema:
+        type: string
+        format: datetime
+        example: 2018-03-14T00:00:00.000Z
+    created_by.end_date:
+      name: created_by.end_date
+      in: query
+      description: Fin de l'intervalle de la date de création du contact
+      schema:
+        type: string
+        format: datetime
+        example: 2018-03-15T00:00:00.000Z
+    created_by.user_login:
+      name: created_by.user_login
+      in: query
+      description: Login de l'utilisateur qui a réalisé une création de contact
+      schema:
+        type: string
+        example: user5830
+    modified_by.start_date:
+      name: modified_by.start_date
+      in: query
+      description: Début de l'intervalle de la date de modification du contact
+      schema:
+        type: string
+        format: datetime
+        example: 2018-03-14T00:00:00.000Z
+    modified_by.end_date:
+      name: modified_by.end_date
+      in: query
+      description: Fin de l'intervalle de la date de modification du contact
+      schema:
+        type: string
+        format: datetime
+        example: 2018-03-15T00:00:00.000Z
+    modified_by.user_login:
+      name: modified_by.user_login
+      in: query
+      description: Login de l'utilisateur qui a réalisé une modification de contact
+      schema:
+        type: string
+        example: user5830
+
+paths:
+  /contacts:
+    post:
+      tags:
+        - Contacts
+      summary: Création d'un contact
+      description: |
+        Permet de créer un contact.
+
+        Un contact est défini par les champs suivants. Certains champs sont facultatifs
+
+        - Nom (facultatif)
+        - Prénom (facultatif)
+        - Raison sociale ou nom de l’entité publique (obligatoire)
+        - Email du contact (obligatoire si mode d’envoi Email ou Portail de publication)
+        - Identifiant client du contact (obligatoire)
+        - Siret (obligatoire si mode d’envoi Chorus ou Portail de publication)
+        - Canal de distribution (Courrier, email, Chorus, Portail de publication) (obligatoire)
+        - Numéro d’engagement juridique (facultatif)
+        - Code service exécutant (facultatif)
+        - Adresse_lines_1 (Adresse_lines_1 ou Adresse_lines_2 obligatoire si
+        mode d’envoi Courrier et Portail de publication)
+        - Adresse_lines_2 (Adresse_lines_1 ou Adresse_lines_2 obligatoire si
+        mode d’envoi Courrier et Portail de publication)
+        - Adresse_lines_3 (facultatif)
+        - Adresse_lines_4 (facultatif)
+        - Adresse_lines_5 (facultatif)
+        - Adresse_lines_6 (obligatoire si mode d’envoi Courrier et Portail de publication)
+        - Le code pays (obligatoire si mode d’envoi Courrier et Portail de publication)
+        - Identifiant du template email associé au contact (facultatif)
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/contact_creation'
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contact_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    get:
+      tags:
+        - Contacts
+      summary: Liste des contacts
+      description: |
+        Permet d'obtenir une liste des contacts dans le carnet d'adresses.
+          La recherche se fait sur les champs suivants
+          - Nom / Prénom
+          - Raison sociale
+          - SIRET
+          - Code service exécutant
+          - Numéro engagement juridique
+          - Adresse email
+
+        Le filtrage et le tri se font sur les champs suivants
+          - Mode d'envoie
+          - Identifiant unique du contact chez le client
+          - Nom
+          - Prénom
+          - Raison sociale du contact
+          - Siret
+          - Identifiant du template email associé
+          - Date de création
+          - Login de l'utilisateur qui a créé le contact
+          - Date de dernière modification
+          - Login de l'utilisateur qui a fait la dernière modification sur le contact
+
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/desc'
+        - $ref: '#/components/parameters/sending_mode'
+        - $ref: '#/components/parameters/identifier_filter'
+        - $ref: '#/components/parameters/first_name'
+        - $ref: '#/components/parameters/last_name'
+        - $ref: '#/components/parameters/company_name'
+        - $ref: '#/components/parameters/siret'
+        - $ref: '#/components/parameters/country_code'
+        - $ref: '#/components/parameters/email_template_id'
+        - $ref: '#/components/parameters/created_by.start_date'
+        - $ref: '#/components/parameters/created_by.end_date'
+        - $ref: '#/components/parameters/created_by.user_login'
+        - $ref: '#/components/parameters/modified_by.start_date'
+        - $ref: '#/components/parameters/modified_by.end_date'
+        - $ref: '#/components/parameters/modified_by.user_login'
+
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contacts_response_with_pagination'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    delete:
+      tags:
+        - Contacts
+      summary: Suppression de tous les contacts d'un carnet d'adresses.
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+  /contacts/import:
+    post:
+      tags:
+        - Contacts
+      summary: Ajout de un ou plusieurs contacts au carnet d'adresses
+      description: Permet d'ajouter un ou plusieurs contacts au carnet d'adresses.</br>
+
+        L'import d'un contact avec un identifiant (identifier) qui existe déjà dans la base permet de mettre à jour les informations du contact.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/import_contacts'
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/import_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+
+  /contacts/{contact_id}:
+    get:
+      tags:
+        - Contacts
+      summary: Détail d'un contact
+      description: Permet de récupérer le détail d'un contact à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/contact_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contact_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    patch:
+      tags:
+        - Contacts
+      summary: Modification partielle d'un contact
+      description: Permet de modifier un contact.
+      parameters:
+        - $ref: '#/components/parameters/contact_id'
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/contact_creation'
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/contact_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Contacts
+      summary: Suppression d'un contact
+      description: Permet de supprimer un contact.
+      parameters:
+        - $ref: '#/components/parameters/contact_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+
+  /templates/{template_id}:
+    post:
+      tags:
+        - Templates
+      summary: Associer un template email à plusieurs contacts
+      description: Associer un template email à plusieurs contacts en fournissant une liste d'identifiants.
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/contact_ids_list'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /templates/{template_id}/unlink_all:
+    post:
+      tags:
+        - Templates
+      summary: Supprimer le lien template email à tous les contacts liés a un template_id
+      description: Supprimer le lien template email à tous les contacts liés a un template_id.
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'

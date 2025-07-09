@@ -1,0 +1,856 @@
+openapi: 3.0.0
+servers:
+  - url: https://api.sandbox.maileva.net/email_templates/v1
+    description: Sandbox
+  - url: https://api.maileva.com/email_templates/v1
+    description: Production
+info:
+  version: "1.14"
+  title: API Modèles d'e-mail pour envoi de documents
+  description: >-
+    API de gestion de modèles d'e-mail utilisés pour personnaliser des envois de documents (factures...).
+
+    
+    Pour créer un modèle d'e-mail, des informations sont requises et il est possible d'insérer des variables selon le type de document.
+
+    
+    ### Variables pour Factures Clients :
+    
+    <table border="1">
+      <tr bgcolor="lightgrey">
+        <th>Usage</th>
+        <th>Description</th>
+        <th>Clé</th>
+      </tr>
+      <tr>
+        <td rowspan="6" align=center>INVOICE_EMAIL <br/>INVOICE_PORTAL</td>
+        <td align=center>Raison sociale du destinataire</td>
+        <td align=center>recipient_company_name</td>
+      </tr>
+      <tr>
+        <td align=center>Numéro de facture</td>
+        <td align = center>invoice_number</td>
+      </tr>
+      <tr>
+        <td align=center>Date de la facture</td>
+        <td align=center>invoice_date</td>
+      </tr>
+      <tr>
+        <td align=center>Date d’échéance</td>
+        <td align=center>invoice_due_date</td>
+      </tr>
+      <tr>
+        <td align=center>Montant de la facture</td>
+        <td align=center>invoice_amount</td>
+      </tr>
+      <tr>
+        <td align=center>Type de document</td>
+        <td align=center>invoice_type</td>
+      </tr>
+      <tr>
+        <td align=center>INVOICE_PORTAL</td>
+        <td align=center>URL du lien d'accès à la facture sur le portail de publication (obligatoire)</td>
+        <td align=center>account_url</td>
+      </tr>
+    </table>
+
+security:
+  - bearerAuth: [ ]
+components:
+  securitySchemes:
+    bearerAuth:
+      description: >-
+        Indiquez le token directement obtenu via la méthode suivante :
+
+
+        curl -X POST
+        'https://connexion.maileva.com/auth/realms/services/protocol/openid-connect/token'
+        \
+
+        -H 'Content-Type: application/x-www-form-urlencoded' \
+
+        -u 'my_client_id:my_client_secret' \
+
+        -d
+        'grant_type=password&username=my_user_login&password=my_user_password' \
+
+        -v
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+
+  schemas:
+    template_infos:
+      type: object
+      description: Informations d'un template email
+      properties:
+        name:
+          type: string
+          maxLength: 50
+          minLength: 1
+          description: Intitulé du template
+          example: Template clients Société XYZ
+        from:
+          type: string
+          maxLength: 50
+          minLength: 1
+          description: Nom libre de l'expéditeur de l'email
+          example: "Jean DUPONT"
+        reply_to_name:
+          type: string
+          maxLength: 50
+          description: Nom libre associé a l'adresse email de retour
+          example: "Jean DUPONT"
+        reply_to_email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Adresse email de retour
+          example: "jean.dupont@gmail.com"
+        html_content:
+          type: string
+          description: Corps de l'email, en HTML
+          minLength: 1
+          example: "<h1>Veuillez trouver ci-joint votre facture {{invoice_number}}.</h1>"
+        text_content:
+          type: string
+          description: Corps de l'email, en texte
+          minLength: 1
+          example: "Veuillez trouver ci-joint votre facture {{invoice_number}}."
+        subject:
+          type: string
+          maxLength: 255
+          minLength: 1
+          description: Objet de l'email contenant la facture
+          example: "Votre facture {{invoice_number}} est disponible"
+        template_variables:
+          $ref: '#/components/schemas/template_variables'
+
+    identifiable:
+      type: object
+      required:
+        - id
+      readOnly: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant du template
+          readOnly: true
+          example: cf9eae90-ac38-4232-ab7d-7a185b3f19ac
+
+    auditable:
+      type: object
+      required:
+        - created_by
+      readOnly: true
+      properties:
+        created_by:
+          $ref: '#/components/schemas/crud_operation'
+        modified_by:
+          $ref: '#/components/schemas/crud_operation'
+
+    template_creation:
+      type: object
+      description: Requete de création de template email
+      allOf:
+        - $ref: '#/components/schemas/template_infos'
+        - type: object
+          properties:
+            usages:
+              $ref: '#/components/schemas/usages_list'
+      required:
+        - name
+        - from
+        - usages
+        - html_content
+        - text_content
+        - subject
+
+
+    template_update:
+      type: object
+      description: Requete de modification de template email
+      allOf:
+        - $ref: '#/components/schemas/template_infos'
+        - type: object
+          properties:
+            usages:
+              $ref: '#/components/schemas/usages_list'
+
+    template_response:
+      type: object
+      description: template email
+      required:
+        - name
+        - from
+        - usages
+        - html_content
+        - text_content
+        - subject
+        - created_by
+      allOf:
+        - $ref: '#/components/schemas/identifiable'
+        - $ref: '#/components/schemas/template_infos'
+        - $ref: '#/components/schemas/auditable'
+        - type: object
+          properties:
+            usages:
+              $ref: '#/components/schemas/template_usages_default'
+
+    templates_response:
+      type: object
+      required:
+        - templates
+        - paging
+      description: Liste des templates
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/template_response'
+        paging:
+          $ref: '#/components/schemas/paging_response'
+
+    usage:
+      type: string
+      description: >-
+        Usage d'un envoi <br/>
+        <table border="1">
+          <tr bgcolor="lightgrey">
+            <th>Code</th>
+            <th>Description</th>
+          </tr>
+          <tr><td>INVOICE_EMAIL</td><td>Envoi d'une facture avec le mode d'envoi E-mail</td></tr>
+          <tr><td>INVOICE_PORTAL</td><td>Envoi d'une facture avec le mode d'envoi portal</td></tr>
+          <tr><td>NOTIFICATION</td><td>Envoi d'une notification</td></tr> 
+        </table>
+      enum:
+        - INVOICE_EMAIL
+        - INVOICE_PORTAL
+        - NOTIFICATION
+      example: INVOICE_EMAIL
+
+    usages_list:
+      description: Liste d'usages
+      type: array
+      minItems: 1
+      example: ["INVOICE_EMAIL", "NOTIFICATION"]
+      items:
+        $ref: '#/components/schemas/usage'
+
+    template_variable:
+      type: object
+      description: >-
+        Variables du template </br>
+        Liste des variables disponibles pour les usages invoice_email et invoice_portal :</br>
+        - recipient_company_name</br>
+        - invoice_amount</br>
+        - invoice_date</br>
+        - invoice_number</br>
+        - invoice_due_date</br>
+        - invoice_type</br>
+        - account_url (utilisée seulement pour l'usage invoice_portal et de façon obligatoire)</br>
+      required:
+        - key
+        - mandatory
+      properties:
+        key:
+          type: string
+          description: Nom de la variable, utilisé dans le template
+          maxLength: 50
+          minLength: 1
+          example: invoice_number
+        mandatory:
+          type: boolean
+          description: indique si la variable est obligatoire
+          example: true
+        default_value:
+          type: string
+          description: La valeur a utiliser par défaut si la valeur de la variable n'est pas rensegnée
+          example: EZRE123123
+        transcoding_mapping:
+          $ref: '#/components/schemas/variable_mappings'
+
+    template_variables:
+      type: array
+      items:
+        $ref: '#/components/schemas/template_variable'
+      example: [{"key": "invoice_number", "mandatory": true, "default_value": "EZRE123123"},
+                {"key": "invoice_amount", "mandatory": false, "default_value": 0},
+                {"key": "invoice_type", "mandatory": true, "transcoding_mapping": [{"key": "INVOICE", "value": "facture"}, {"key": "CREDIT", "value": "avoir"}]}]
+
+    template_usages_default:
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/template_usage_default'
+
+    template_usage_default:
+      type: object
+      description: Definir l'usage du template et si il est le defaut template ou pas.
+      required:
+        - usage
+      properties:
+        usage:
+          $ref: '#/components/schemas/usage'
+        is_default:
+          type: boolean
+          default: false
+          description: true si il s'agit d'un template par defaut, false sinon.
+          example: false
+
+    crud_operation:
+      type: object
+      description: décrire une opération de création ou de modification d'un objet
+      properties:
+        user_login:
+          type: string
+          description: Login de l'utilisateur qui a réalisé l'opération
+          example: user_login
+        user_id:
+          type: string
+          description: Id de l'utilisateur qui a réalisé l'opération
+          example: c27c8088-7bc7-4de4-80ff-5e5699ac116e
+        application_id:
+          type: string
+          description: Identifiant de l'application
+          example: d905a65e-aa46-4f37-8480-260c4600c810
+        date:
+          type: string
+          format: datetime
+          description: Date de l'opération
+          example: '2018-03-14T07:21:40.757Z'
+
+    content_type:
+      type: string
+      description: Type de contenu (HTML, TEXT ou SUBJECT)
+      enum:
+        - HTML
+        - TEXT
+        - SUBJECT
+
+    usages_list_object:
+      type: object
+      required:
+        - usages
+      properties:
+        usages:
+          $ref: '#/components/schemas/usages_list'
+
+    variable_value:
+      type: object
+      description: Variables du template
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description: Nom de la variable, utilisé dans le template
+          maxLength: 50
+          minLength: 1
+          example: invoice_number
+        value:
+          type: string
+          description: Valeur de la variable.
+          maxLength: 255
+          minLength: 1
+          example: EZRE123123
+
+    variables_values:
+      type: array
+      items:
+        $ref: '#/components/schemas/variable_value'
+      example: [ { "key": "invoice_number", "value": "EZRE123123" },
+                 { "key": "invoice_due_date", "value": "10-10-2023" } ]
+
+    variable_mapping:
+      type: object
+      description: Mapping de valeurs a utiliser dans l'email associé a la variable
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description: Valeur originale
+          maxLength: 255
+          minLength: 1
+          example: INVOICE
+        value:
+          type: string
+          description: Valeur associée
+          maxLength: 255
+          minLength: 1
+          example: facture
+
+    variable_mappings:
+      type: array
+      items:
+        $ref: '#/components/schemas/variable_mapping'
+      example: [ { "key": "INVOICE", "value": "facture" },
+                 { "key": "CREDIT", "value": "avoir" } ]
+
+    preview_request_body:
+      type: object
+      properties:
+        content_type:
+          $ref: '#/components/schemas/content_type'
+        variables_values:
+          $ref: '#/components/schemas/variables_values'
+
+    errors_response:
+      description: Liste d'erreurs
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/error_response'
+    error_response:
+      description: Description de l'erreur
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |-
+            <table border="1">
+              <tr bgcolor="lightgrey">
+                <th>Code</th>
+                <th>Description</th>
+              </tr>
+
+              <tr><td>ATTRIBUTE_MANDATORY</td><td>L'attribut est obligatoire. Le message de l'erreur fait référence à l'attribut concerné.</td></tr>
+              <tr><td>ATTRIBUTE_WRONG_PARAMETER</td><td>L'attribut est incorrect. Le message de l'erreur fait référence à l'attribut concerné.</td></tr>
+              <tr><td>DEFAULT_TEMPLATE_NOT_FOUND</td><td>Le template par défaut n'a pas été trouvé en utilisant l'identifiant fourni.</td></tr>
+              <tr><td>DUPLICATE_TEMPLATE_VARIABLE</td><td>La variable doit être unique dans la liste des variables. Le message d'erreur fait référence à la variable concernée.</td></tr>
+              <tr><td>DUPLICATE_TRANSCODING_MAPPING_KEY</td><td>La valeur du paramètre 'key' doit être unique dans le mapping de traduction de la variable. Le message d'erreur fait référence à la valeur du paramètre 'key'.</td></tr>
+              <tr><td>DUPLICATE_USAGES_VALUE</td><td>Les valeurs du paramètre 'usage' doivent être différentes.</td></tr>
+              <tr><td>EMPTY_ATTRIBUTE</td><td>L'attribut est vide. Le message de l'erreur fait référence à l'attribut concerné.</td></tr>
+              <tr><td>EMPTY_REQUEST_BODY</td><td>Le body de la requête est vide.</td></tr>
+              <tr><td>FORBIDDEN_INVOICE_PORTAL_AND_INVOICE_EMAIL</td><td>Les valeurs du paramètre 'usage' sont incompatibles.</td></tr>
+              <tr><td>INVALID_ATTRIBUTE</td><td>L'attribut est invalide. Le message de l'erreur fait référence à l'attribut concerné.</td></tr>
+              <tr><td>INVALID_TEMPLATE_VARIABLE_KEY</td><td>La valeur du paramètre 'key' est invalide. Le message de l'erreur fait référence à la valeur concernée.</td></tr>
+              <tr><td>MANDATORY_NAME</td><td>Nom du template obligatoire.</td></tr>
+              <tr><td>MANDATORY_FROM</td><td>Le nom de l'émetteur est obligatoire.</td></tr>
+              <tr><td>MANDATORY_REPLY_TO</td><td>Adresses email de réponse obligatoire.</td></tr>
+              <tr><td>MANDATORY_SUBJECT</td><td>Le nom est obligatoire.</td></tr>
+              <tr><td>MANDATORY_BODY</td><td>Le corps de l'email est obligatoire.</td></tr>
+              <tr><td>MANDATORY_FOOTER</td><td>La signature de l'email est obligatoire.</td></tr>
+              <tr><td>MAX_TEMPLATE_NUMBER_EXEEDED</td><td>La limite du nombre de template autorisée a été atteinte.</td></tr>
+              <tr><td>MISSING_TEMPLATE_VARIABLE</td><td>Une variable n'étant pas présente dans la liste template_variables a été utilisée. Le message d'erreur fait référence à la variable concernée.</td></tr>
+              <tr><td>MISSING_TRANSCODING_MAPPING</td><td>Le mapping de traduction est obligatoire pour la variable. Le message d'erreur fait référence à la variable concernée.</td></tr>
+              <tr><td>TEMPLATE_EXCEED_MAX_SIZE</td><td>La taille du template a dépassé la limite autorisée.</td></tr>
+              <tr><td>TEMPLATE_NOT_FOUND</td><td>Le template n'a pas été trouvé en utilisant l'identifiant fourni.</td></tr>
+              <tr><td>TEMPLATE_USAGES_NOT_FOUND</td><td>Les usages utilisés n'existent pas dans la liste des usages du template.</td></tr>
+              <tr><td>TRANSCODING_MAPPING_KEY_WORD_NOT_FOUND</td><td>La valeur du paramètre 'key' dans le mapping de traduction n'a pas été trouvée pour la variable . Le message d'erreur fait référence à la variable et à la valeur du paramètre 'key' concernées.</td></tr>
+              <tr><td>TRANCODING_MAPPING_NOT_AUTHORIZED</td><td>. L'utilisation d'un mapping de traduction n'est pas autorisée pour la variable. Le message d'erreur fait référence à la variable concernée.</td></tr>
+              <tr><td>CONTACT_NOT_FOUND</td><td>Le contact n'a pas été trouvé en utilisant l'identifiant fourni.</td></tr>
+              <tr><td>DEFAULT_TEMPLATE_CONNOT_BE_DELETED</td><td>Impossible de supprimer le template par défaut.</td></tr>
+            </table>
+        message:
+          type: string
+
+    paging_response:
+      description: Pagination des résultats
+      type: object
+      properties:
+        next:
+          description: Page suivante
+          type: string
+        prev:
+          description: Page précédente
+          type: string
+        total_results:
+          description: Nombre de résultats
+          type: integer
+          format: int32
+
+  parameters:
+    template_id:
+      name: template_id
+      in: path
+      description: Identifiant d'un template
+      required: true
+      schema:
+        type: string
+        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+    preview_id:
+      name: preview_id
+      in: path
+      description: Identifiant du preview
+      required: true
+      schema:
+        type: string
+        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+    usage:
+      name: usage
+      in: path
+      description: Usage
+      required: true
+      schema:
+        $ref: '#/components/schemas/usage'
+
+    paging_start_index:
+      name: start_index
+      in: query
+      description: Le premier élément à retourner
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1
+        minimum: 1
+    paging_count:
+      name: count
+      in: query
+      description: Le nombre d'élément à retourner
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 50
+        minimum: 1
+        maximum: 500
+    sort:
+      name: sort
+      description: Champs, dans l'ordre, sur lesquels il y a un tri
+      in: query
+      required: false
+      schema:
+        type: string
+        default: "created_by.date"
+        example: "created_by.date,name"
+    desc:
+      name: desc
+      description: Champs sur lesquels il y a un tri descendant
+      in: query
+      required: false
+      schema:
+        type: string
+        default: "created_by.date"
+        example: "created_by.date,name"
+
+    contract_id:
+      name: contract_id
+      description: id du contrat
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        example: 9B952DBA-6D26-BD97-ACEE-8FC36585927A
+    client_id:
+      name: client_id
+      description: Id client
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        example: 9B952DBA-6D26-BD97-ACEE-8FC36585927A
+    user_id:
+      name: user_id
+      description: id utilisateur
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        example: 2FC24D8C-F2BA-4A61-88CE-40F140F2D70D
+    login:
+      name: login
+      description: login
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        example: testclient
+
+
+paths:
+  /templates:
+    post:
+      tags:
+        - Templates
+      summary: Création d'un template d'email
+      description: >-
+        Permet de créer un template d'email.
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/template_creation'
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/template_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    get:
+      tags:
+        - Templates
+      summary: Liste des templates d'email
+      description: Permet d'obtenir une liste des templates d'email.
+      parameters:
+        - $ref: '#/components/parameters/paging_start_index'
+        - $ref: '#/components/parameters/paging_count'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/desc'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/templates_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /templates/{template_id}:
+    get:
+      tags:
+        - Templates
+      summary: Détail d'un template
+      description: Permet de récupérer le détail d'un template à partir de son identifiant.
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/template_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    patch:
+      tags:
+        - Templates
+      summary: Modification partielle d'un template
+      description: Permet de modifier un template.
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/template_update'
+      responses:
+        '200':
+          description: Successful operation
+          headers:
+            Location:
+              description: URL vers le détail de la ressource
+              schema:
+                type: string
+                format: url
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/template_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+    delete:
+      tags:
+        - Templates
+      summary: Suppression d'un template
+      description: Permet de supprimer un template, à l'exception du template par defaut qui ne peut pas être supprimé.
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      responses:
+        '204':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /templates/{template_id}/set_default:
+    post:
+      tags:
+        - Templates
+      summary: Attribution d'un caractère par défaut à un template
+      description: Permet de declarer un template comme etant le template par défaut pour une liste d'usages a la place du/des templates par défaut actuels
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/usages_list_object'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+
+  /templates/{template_id}/unset_default:
+    post:
+      tags:
+        - Templates
+      summary: Suppression du caractère par défaut d'un template
+      description: Permet de declarer un template par defaut pour une liste d'usages comme etant template non par défaut.
+      parameters:
+        - $ref: '#/components/parameters/template_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/usages_list_object'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /templates/default_template/{usage}:
+    get:
+      tags:
+        - Templates
+      summary: Détail du template par défaut
+      description: Permet de récupérer le détail du template par défaut correspondant a un usage.
+      parameters:
+        - $ref: '#/components/parameters/usage'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/template_response'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errors_response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
