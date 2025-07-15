@@ -1,7 +1,14 @@
+.github/
 node_modules/
 openapi/
 scripts/
 src/
+test/
 
+.env
+.env.exemple
+.gitignore
+maileva.http
 tsconfig.json
+vitest.config.ts
 yarn.lock
