@@ -10,6 +10,8 @@
     "build": "yarn scripts:build && yarn build:types",
     "build:types": "tsc",
     "test": "vitest",
+    "test:spec": "vitest test/spec",
+    "test:e2e": "vitest test/e2e",
     "test:watch": "yarn test --watch",
     "scripts:build": "tsx ./scripts/build",
     "scripts:generate": "tsx ./scripts/generate",

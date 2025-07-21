@@ -1,5 +1,5 @@
 import { describe, test, beforeEach, expect, afterEach } from "vitest";
-import { createMailevaClient, Maileva } from "../src/client";
+import { createMailevaClient, Maileva } from "../../src/client";
 import { env } from "process";
 
 describe("MailevaClient", () => {
