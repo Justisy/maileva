@@ -9,6 +9,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,7 +21,13 @@ jobs:
       - run: yarn run build
         env:
           NODE_ENV: production
+      - run: yarn run test
+        env:
+          NODE_ENV: test
+          MAILEVA_CLIENT_ID: ${{ secrets.MAILEVA_CLIENT_ID }}
+          MAILEVA_CLIENT_SECRET: ${{ secrets.MAILEVA_CLIENT_SECRET }}
+          MAILEVA_USERNAME: ${{ secrets.MAILEVA_USERNAME }}
+          MAILEVA_PASSWORD: ${{ secrets.MAILEVA_PASSWORD }}
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        working-directory: dist
