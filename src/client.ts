@@ -1,5 +1,6 @@
 import { ClientOptions } from "openapi-fetch";
 import * as apis from "./api";
+import * as utils from "./utils";
 import {
   bearerAuthMiddleware,
   BearerAuthMiddlewareInit,
@@ -15,12 +16,23 @@ export type MailevaServer<T extends keyof Apis = keyof Apis> = {
   [KeyT in T]: keyof Apis[KeyT]["servers"];
 }[T];
 
+type Utils = typeof utils;
+
 export type Maileva<ServerT extends MailevaServer> = {
   [KeyT in keyof Apis as ServerT extends MailevaServer<KeyT>
     ? KeyT extends `${infer NameT}${ApiSuffix}`
       ? NameT
       : never
     : never]: ReturnType<Apis[KeyT]["createClient"]>;
+} & {
+  utils: {
+    [KeyT in keyof Utils]: Utils[KeyT] extends (
+      maileva: any,
+      param: infer ParamT,
+    ) => infer ReturnT
+      ? (param: ParamT) => ReturnT
+      : never;
+  };
 };
 
 export interface MailevaInit<ServerT extends MailevaServer> {
