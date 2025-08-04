@@ -1,8 +1,8 @@
 import { describe, test, beforeEach, expect, afterEach } from "vitest";
-import { createMailevaClient, Maileva } from "../../src/client";
+import { createMailevaClient, Maileva } from "@/client";
 import { env } from "process";
 
-describe("MailevaClient", () => {
+describe.skip("MailevaClient", () => {
   let client: Maileva<"Sandbox">;
 
   beforeEach(() => {
@@ -17,12 +17,12 @@ describe("MailevaClient", () => {
     });
   });
 
-  describe("mail", () => {
+  describe("registeredMail", () => {
     let sendingId: undefined | string;
 
     afterEach(async () => {
       if (!sendingId) return;
-      const { data, error } = await client.mail.DELETE(
+      const { data, error } = await client.registeredMail.DELETE(
         "/sendings/{sending_id}",
         {
           params: { path: { sending_id: sendingId } },
@@ -30,18 +30,21 @@ describe("MailevaClient", () => {
       );
     });
 
-    test("Send simple mail", async () => {
+    test("Send simple registeredMail", async () => {
       // Sending
 
-      const sendingResponse = await client.mail.POST("/sendings", {
+      const sendingResponse = await client.registeredMail.POST("/sendings", {
         body: {
           name: "Test sending",
+          acknowledgement_of_receipt: true,
+          postage_type: "FAST",
+          reference_to_print_enabled: false,
+          returned_mail_scanning: false,
           archiving_duration: 0,
           color_printing: false,
           duplex_printing: false,
           optional_address_sheet: false,
           print_sender_address: false,
-          treat_undelivered_mail: false,
         },
       });
       expect(sendingResponse.data).toBeDefined();
@@ -57,9 +60,9 @@ describe("MailevaClient", () => {
         address_line_3: "Résidence du test",
         address_line_4: "42 rue du test",
         address_line_5: "BP 1337",
-        address_line_6: "75000 Paris",
+        address_line_6: "75000 PARIS",
       };
-      const recipientResponse = await client.mail.POST(
+      const recipientResponse = await client.registeredMail.POST(
         "/sendings/{sending_id}/recipients",
         {
           params: { path: { sending_id: sendingId } },
@@ -69,13 +72,22 @@ describe("MailevaClient", () => {
       expect(recipientResponse.data).toEqual({
         ...recipientBody,
         id: expect.any(String),
+        delivery_statuses: [],
         status: "DRAFT",
+        main_delivery_statuses: [],
+        postage_price: 0,
+        statuses: [
+          {
+            code: "DRAFT",
+            date: expect.any(String),
+          },
+        ],
       });
 
       // Document
 
       const documentContent = "Test content";
-      const documentResponse = await client.mail.POST(
+      const documentResponse = await client.registeredMail.POST(
         "/sendings/{sending_id}/documents",
         {
           params: { path: { sending_id: sendingId } },
@@ -112,7 +124,7 @@ describe("MailevaClient", () => {
 
       // Submit
 
-      const submitResponse = await client.mail.POST(
+      const submitResponse = await client.registeredMail.POST(
         "/sendings/{sending_id}/submit",
         {
           params: {

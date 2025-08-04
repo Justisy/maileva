@@ -1,22 +1,11 @@
-import { Maileva, MailevaServer } from "../client";
-import { components as MailComponents } from "../types/mail";
+import { Maileva, MailevaServer } from "../../client";
+import { components as MailComponents } from "../../types/mail";
+import { unwrap } from "../../utils/lib";
+import { SendMailParam } from "../../utils/types/send";
 
-const unwrap = <DataT>(response: { data?: DataT; error?: unknown }) => {
-  if (response.error != null) {
-    throw response.error;
-  }
-  return response.data as DataT;
-};
-
-export interface SendMailParam {
-  sending: MailComponents["schemas"]["sending_creation"];
-  recipient: MailComponents["schemas"]["recipient_creation"];
-  document: File;
-}
-
-export const sendMail = async <T extends MailevaServer>(
+export const sendMail = async (
   maileva: Maileva<MailevaServer>,
-  param: SendMailParam,
+  param: Omit<SendMailParam, "type">,
 ) => {
   const sending = unwrap(
     await maileva.mail.POST("/sendings", {
@@ -49,7 +38,7 @@ export const sendMail = async <T extends MailevaServer>(
           return form;
         },
         body: {
-          metadata: { name: param.document.name },
+          metadata: { name: param.document.name, priority: 1 },
           document: param.document as any,
         },
       }),

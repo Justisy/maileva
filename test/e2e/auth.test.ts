@@ -4,8 +4,8 @@ import {
   bearerAuthMiddleware,
   BearerAuthMiddlewareInit,
   Jwt,
-} from "../../src/auth/middleware";
-import { authenticationApi } from "../../src/api";
+} from "@/auth/middleware";
+import { authenticationApi } from "@/api";
 import { env } from "process";
 import { MiddlewareCallbackParams } from "openapi-fetch";
 

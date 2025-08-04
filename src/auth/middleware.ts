@@ -128,6 +128,7 @@ export const bearerAuthMiddleware = ({
         jwt = await jwtPromise;
       }
       request.headers.set("Authorization", `bearer ${jwt.token}`);
+      return request;
     },
   } satisfies Middleware;
 };

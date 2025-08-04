@@ -1,5 +1,5 @@
 import { describe, test, beforeEach, vi, expect } from "vitest";
-import { sendMail } from "@/utils/functions";
+import { sendRegisteredMail } from "@/utils/functions";
 
 const createMockApi = () => {
   return {
@@ -10,11 +10,11 @@ const createMockApi = () => {
 
 const createMockClient = () => {
   return {
-    mail: createMockApi(),
+    registeredMail: createMockApi(),
   };
 };
 
-describe("sendMail", () => {
+describe("sendRegisteredMail", () => {
   let client: ReturnType<typeof createMockClient>;
 
   const mockSending = { id: "sending-id" };
@@ -28,34 +28,38 @@ describe("sendMail", () => {
       address_line_6: "3 rue du test",
     },
     sending: {
+      name: "Registered mail",
+      acknowledgement_of_receipt: true,
+      postage_type: "FAST",
+      reference_to_print_enabled: false,
+      returned_mail_scanning: false,
       archiving_duration: 1,
       color_printing: false,
       duplex_printing: false,
       optional_address_sheet: false,
       print_sender_address: true,
-      treat_undelivered_mail: false,
     },
-  } satisfies Parameters<typeof sendMail>[1];
+  } satisfies Parameters<typeof sendRegisteredMail>[1];
 
   beforeEach(() => {
     client = createMockClient();
   });
 
   test("it should call all API endpoints", async () => {
-    client.mail.POST.mockResolvedValueOnce({ data: mockSending })
+    client.registeredMail.POST.mockResolvedValueOnce({ data: mockSending })
       .mockResolvedValueOnce({ data: mockRecipient })
       .mockResolvedValueOnce({ data: mockDocument })
       .mockResolvedValueOnce({});
 
-    await sendMail(client as any, param);
+    await sendRegisteredMail(client as any, param);
 
-    expect(client.mail.POST).toHaveBeenCalledTimes(4);
+    expect(client.registeredMail.POST).toHaveBeenCalledTimes(4);
 
-    expect(client.mail.POST).toHaveBeenNthCalledWith(1, "/sendings", {
+    expect(client.registeredMail.POST).toHaveBeenNthCalledWith(1, "/sendings", {
       body: param.sending,
     });
 
-    expect(client.mail.POST).toHaveBeenNthCalledWith(
+    expect(client.registeredMail.POST).toHaveBeenNthCalledWith(
       2,
       "/sendings/{sending_id}/recipients",
       {
@@ -64,7 +68,7 @@ describe("sendMail", () => {
       },
     );
 
-    expect(client.mail.POST).toHaveBeenNthCalledWith(
+    expect(client.registeredMail.POST).toHaveBeenNthCalledWith(
       3,
       "/sendings/{sending_id}/documents",
       {
@@ -77,28 +81,30 @@ describe("sendMail", () => {
       },
     );
 
-    expect(client.mail.POST).toHaveBeenNthCalledWith(
+    expect(client.registeredMail.POST).toHaveBeenNthCalledWith(
       4,
       "/sendings/{sending_id}/submit",
       { params: { path: { sending_id: "sending-id" } } },
     );
   });
 
-  test("it should DELETE the mail if other API calls fail", async () => {
-    client.mail.POST.mockResolvedValueOnce({
+  test("it should DELETE the registeredMail if other API calls fail", async () => {
+    client.registeredMail.POST.mockResolvedValueOnce({
       data: mockSending,
     }).mockResolvedValueOnce({ error: "mock error" });
 
-    await expect(sendMail(client as any, param)).rejects.toThrow("mock error");
+    await expect(sendRegisteredMail(client as any, param)).rejects.toThrow(
+      "mock error",
+    );
 
-    expect(client.mail.POST).toHaveBeenCalledTimes(2);
-    expect(client.mail.DELETE).toHaveBeenCalledTimes(1);
+    expect(client.registeredMail.POST).toHaveBeenCalledTimes(2);
+    expect(client.registeredMail.DELETE).toHaveBeenCalledTimes(1);
 
-    expect(client.mail.POST).toHaveBeenNthCalledWith(1, "/sendings", {
+    expect(client.registeredMail.POST).toHaveBeenNthCalledWith(1, "/sendings", {
       body: param.sending,
     });
 
-    expect(client.mail.POST).toHaveBeenNthCalledWith(
+    expect(client.registeredMail.POST).toHaveBeenNthCalledWith(
       2,
       "/sendings/{sending_id}/recipients",
       {
@@ -107,7 +113,7 @@ describe("sendMail", () => {
       },
     );
 
-    expect(client.mail.DELETE).toHaveBeenNthCalledWith(
+    expect(client.registeredMail.DELETE).toHaveBeenNthCalledWith(
       1,
       "/sendings/{sending_id}",
       { params: { path: { sending_id: "sending-id" } } },

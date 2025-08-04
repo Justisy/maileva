@@ -1,0 +1,47 @@
+@baseUrl = https://api.sandbox.maileva.net
+
+# @name auth
+POST https://connexion.sandbox.maileva.net/auth/realms/services/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password
+&client_id={{$dotenv MAILEVA_CLIENT_ID}}
+&client_secret={{$dotenv MAILEVA_CLIENT_SECRET}}
+&username={{$dotenv MAILEVA_USERNAME}}
+&password={{$dotenv MAILEVA_PASSWORD}}
+
+###
+
+@token = {{auth.response.body.access_token}}
+
+###
+
+# @name createSending
+POST {{baseUrl}}/registered_mail/v4/sendings
+Authorization: bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Test sending"
+}
+
+###
+
+@sendingId = {{createSending.response.body.id}}
+
+###
+
+POST {{baseUrl}}/registered_mail/v4/sendings/{{sendingId}}/documents
+Authorization: bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="metadata"
+
+{"name":"test.txt","priority":2,"category":"ANNEX"}
+------Boundary
+Content-Disposition: form-data; name="document"; filename="test.txt"
+Content-Type: text/plain
+
+Test content
+------Boundary-

@@ -1,6 +1,6 @@
 import { ClientOptions } from "openapi-fetch";
 import * as apis from "./api";
-import * as utils from "./utils";
+import * as utils from "./utils/functions";
 import {
   bearerAuthMiddleware,
   BearerAuthMiddlewareInit,
@@ -47,7 +47,10 @@ export const createMailevaClient = <ServerT extends MailevaServer>(
   { server, credentials }: MailevaInit<ServerT>,
   options?: ClientOptions,
 ): Maileva<ServerT> => {
-  let client: Record<string, ReturnType<Apis[keyof Apis]["createClient"]>> = {};
+  let clientApis: Record<
+    string,
+    ReturnType<Apis[keyof Apis]["createClient"]>
+  > = {};
 
   const filteredApis: Record<string, Apis[keyof Apis]> = {};
   for (let [key, api] of Object.entries(apis)) {
@@ -62,10 +65,10 @@ export const createMailevaClient = <ServerT extends MailevaServer>(
       baseUrl: api.servers[server as keyof typeof api.servers],
       ...options,
     });
-    client[key] = apiClient;
+    clientApis[key] = apiClient;
   }
 
-  const authenticationClient = client.authentication as ReturnType<
+  const authenticationClient = clientApis.authentication as ReturnType<
     Apis["authenticationApi"]["createClient"]
   >;
   const middleware = bearerAuthMiddleware({
@@ -77,10 +80,23 @@ export const createMailevaClient = <ServerT extends MailevaServer>(
     if (security == null || !(security as string[]).includes("bearerAuth")) {
       continue;
     }
-    client[key].use(middleware);
+    clientApis[key].use(middleware);
   }
 
-  return client as Maileva<ServerT>;
+  const clientUtils = {} as Maileva<ServerT>["utils"];
+
+  const client = {
+    ...clientApis,
+    utils: clientUtils,
+  } as Maileva<ServerT>;
+
+  for (let [key, utilsFn] of Object.entries(utils)) {
+    clientUtils[key as keyof typeof clientUtils] = ((param: unknown) => {
+      return (utilsFn as any)(client, param);
+    }) as any;
+  }
+
+  return client;
 };
 
 export default createMailevaClient;

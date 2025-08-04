@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import createMailevaClient from "../../src/client";
+import createMailevaClient from "@/client";
 
 describe("createMailevaClient", () => {
   const credentials = {

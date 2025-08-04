@@ -1,14 +1,15 @@
 {
   "name": "maileva",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "author": "Justisy",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "yarn scripts:build && yarn build:types",
-    "build:types": "tsc",
+    "build": "rimraf dist && yarn scripts:build && yarn build:types",
+    "build:types": "tsc -p tsconfig.build.json",
+    "lint": "tsc --noEmit --watch",
     "test": "vitest",
     "test:spec": "vitest test/spec",
     "test:e2e": "vitest test/e2e",
@@ -18,7 +19,8 @@
     "scripts:schemas": "tsx ./scripts/schemas"
   },
   "dependencies": {
-    "openapi-fetch": "^0.14.0"
+    "openapi-fetch": "^0.14.0",
+    "rimraf": "^6.0.1"
   },
   "devDependencies": {
     "@types/node": "24.0.10",
