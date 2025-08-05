@@ -1,6 +1,6 @@
 {
   "name": "maileva",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "author": "Justisy",
   "type": "module",
@@ -19,8 +19,8 @@
     "scripts:schemas": "tsx ./scripts/schemas"
   },
   "dependencies": {
-    "openapi-fetch": "^0.14.0",
-    "rimraf": "^6.0.1"
+    "jwt-decode": "4.0.0",
+    "openapi-fetch": "^0.14.0"
   },
   "devDependencies": {
     "@types/node": "24.0.10",
@@ -28,9 +28,9 @@
     "cheerio": "1.1.0",
     "dotenv": "17.1.0",
     "esbuild": "0.25.5",
-    "jwt-decode": "4.0.0",
     "openapi-typescript": "7.8.0",
     "prettier": "3.6.2",
+    "rimraf": "^6.0.1",
     "tsx": "4.20.3",
     "typescript": "5.8.3",
     "vitest": "3.2.4",
