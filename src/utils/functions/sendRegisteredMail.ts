@@ -32,7 +32,12 @@ export const sendRegisteredMail = async (
         params: { path: { sending_id: sending.id } },
         bodySerializer: (body) => {
           const form = new FormData();
-          form.append("metadata", JSON.stringify(body.metadata));
+          form.append(
+            "metadata",
+            new Blob([JSON.stringify(body.metadata)], {
+              type: "application/json",
+            }),
+          );
           form.append("document", body.document as any);
           return form;
         },

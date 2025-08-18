@@ -2,7 +2,7 @@ import { describe, test, beforeEach, expect, afterEach } from "vitest";
 import { createMailevaClient, Maileva } from "@/client";
 import { env } from "process";
 
-describe.skip("MailevaClient", () => {
+describe("MailevaClient", () => {
   let client: Maileva<"Sandbox">;
 
   beforeEach(() => {
@@ -45,6 +45,13 @@ describe.skip("MailevaClient", () => {
           duplex_printing: false,
           optional_address_sheet: false,
           print_sender_address: false,
+
+          sender_address_line_1: "Maileva",
+          sender_address_line_2: "Mr Unit Test",
+          sender_address_line_3: "Résidence du test",
+          sender_address_line_4: "42 rue du test",
+          sender_address_line_5: "BP 1337",
+          sender_address_line_6: "75000 PARIS",
         },
       });
       expect(sendingResponse.data).toBeDefined();
@@ -95,7 +102,12 @@ describe.skip("MailevaClient", () => {
             const fd = new FormData();
             if (body) {
               if (body.metadata) {
-                fd.append("metadata", JSON.stringify(body.metadata));
+                fd.append(
+                  "metadata",
+                  new Blob([JSON.stringify(body.metadata)], {
+                    type: "application/json",
+                  }),
+                );
               }
               if (body.document) {
                 fd.append("document", body.document);
@@ -115,11 +127,9 @@ describe.skip("MailevaClient", () => {
         id: expect.any(String),
         name: "test.txt",
         priority: 1,
-        type: "text/plain",
         size: documentContent.length,
-        converted_size: 0,
-        pages_count: 0,
-        sheets_count: 0,
+        status: "PENDING",
+        type: "txt",
       });
 
       // Submit
